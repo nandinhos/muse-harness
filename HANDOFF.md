@@ -77,4 +77,7 @@ melhoria; `diff -r` periódico contra cópias).
 - [x] Versionar evoluções por commit — em dia: 2 commits em `main`
   (`a67f12a`, `4de6f7b`) + branches `dev` / `homologacao` criadas de `main`.
 - [ ] Avaliar promoção das skills `systematic-debugging` / `durable-test-collateral`.
-- [ ] Rotina `diff -r` canônico × instalações (detectar deriva silenciosa).
+  (Em `dev` entrou primeiro `code-minimalism` opt-in, ADR 003.)
+- [x] Rotina `diff -r` canônico × instalações — entregue em `dev`:
+  `profiles/clearer-muse/scripts/canonical-diff.sh` (exit 0 idêntico,
+  1 deriva, 2 destino inválido; validado nos 3 casos).

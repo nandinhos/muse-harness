@@ -16,8 +16,10 @@ no projeto `events`. Sem segredos neste repo: chaves vivem no ambiente do host
 
 ## Estado
 
-- Profile `clearer-muse` v0.1.0 + seções 6 (endosso Context7) e 7 (lições) — espelha o
-  que roda no `events`, promovido de lá por cópia verificada (`diff -r` idêntico).
+- Profile `clearer-muse` v0.2.0 (`dev`): `token-economy` com densidade de palavras
+  e teto 1k/handoff; addon opt-in `code-minimalism` (ADR 003); rotina
+  `scripts/canonical-diff.sh` anti-deriva. Filosofia CLEARER em 3 branches:
+  `dev` (desenvolvimento) → `homologacao` (staging) → `main` (produção).
 - Ativação num projeto: ver `docs/CREATE-PROFILE.md` §5 (aponta a fonte instalada para
   `profiles/<nome>` e reinicia a sessão).
 
