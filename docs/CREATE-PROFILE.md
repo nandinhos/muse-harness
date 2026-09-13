@@ -58,6 +58,9 @@ Contrato do manifest (observado em `plugin.json` do clearer-muse, `schemaVersion
    segredos só via `${VAR}` (ver §6).
 7. **Evolução**: melhorias entram primeiro no profile canônico aqui, depois são
    promovidas aos projetos por cópia verificada (`diff -r`), nunca o inverso.
+   Rotina: `profiles/clearer-muse/scripts/canonical-diff.sh [<destino>]`
+   (sem argumento, compara contra a fonte registrada no `installed.json`;
+   rode a cada promoção e após cada bump de versão).
 
 ## 6. Segredos (regra absoluta)
 
