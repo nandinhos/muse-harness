@@ -69,7 +69,12 @@ melhoria; `diff -r` periódico contra cópias).
 
 ## 7. Pendências herdadas
 
-- [ ] Confirmar MCP `context7` operacional pós-restart (passo 4 acima).
-- [ ] Versionar evoluções por commit (este repo ainda tem 1 commit).
+- [~] Confirmar MCP `context7` operacional pós-restart (passo 4 acima).
+  Status `dev` 2026-09-13 (OBSERVED): chave presente em shell interativo
+  (`bash -ic` → `set len=43`, valor nunca impresso); `~/.bashrc` tem 2 linhas
+  `export` (última vence — remover a duplicada é opcional, fora do repo).
+  Prova funcional plena (busca 200) exige sessão pós-restart — registrar então.
+- [x] Versionar evoluções por commit — em dia: 2 commits em `main`
+  (`a67f12a`, `4de6f7b`) + branches `dev` / `homologacao` criadas de `main`.
 - [ ] Avaliar promoção das skills `systematic-debugging` / `durable-test-collateral`.
 - [ ] Rotina `diff -r` canônico × instalações (detectar deriva silenciosa).
