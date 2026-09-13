@@ -18,6 +18,9 @@ Tríade de economia portada do CEH, sem dependência obrigatória externa:
 3. Nunca cole o mesmo dump duas vezes no contexto; referencie arquivo:linha.
 4. Um ciclo de auto-reparo de teste com evidência; falhou de novo → handoff (regra do dispatcher `clearer`).
 5. Feche a tarefa com `/token-report` quando a sessão envolveu logs grandes: registra gasto estimado vs. orçamento.
+6. Densidade de palavras no contexto: prefira tabelas a parágrafos para estado
+   comparativo; cite `arquivo:linha`, nunca recole o mesmo dump duas vezes;
+   condense prosa de handoff ao essencial verificável (quem, o quê, evidência).
 
 ## Orçamento padrão por tarefa
 
@@ -26,5 +29,6 @@ Tríade de economia portada do CEH, sem dependência obrigatória externa:
 | Leitura única de arquivo | 8k tokens (`fatie` acima) |
 | Saída única de comando (comprimida) | 4k tokens |
 | Evidence Pack entre subagentes | 2k tokens |
+| Handoff/resumo entre sessões | 1k tokens |
 
 Tetos são metas de higiene, não limites rígidos: estoure apenas com justificativa `OBSERVED` (ex. stack trace completo necessário ao diagnóstico).
