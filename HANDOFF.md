@@ -69,11 +69,14 @@ melhoria; `diff -r` periódico contra cópias).
 
 ## 7. Pendências herdadas
 
-- [~] Confirmar MCP `context7` operacional pós-restart (passo 4 acima).
-  Status `dev` 2026-09-13 (OBSERVED): chave presente em shell interativo
-  (`bash -ic` → `set len=43`, valor nunca impresso); `~/.bashrc` tem 2 linhas
-  `export` (última vence — remover a duplicada é opcional, fora do repo).
-  Prova funcional plena (busca 200) exige sessão pós-restart — registrar então.
+- [x] Confirmar MCP `context7` operacional pós-restart (passo 4 acima).
+  Prova 2026-09-13 pós-restart (OBSERVED, resposta descartada com `shred -u`):
+  `initialize` ok; `tools/list` → `resolve-library-id,query-docs`;
+  `resolve-library-id{libraryName+query}` → `/reactjs/react.dev` (1746 bytes);
+  `query-docs` → 5056 bytes de docs reais. Chave só em shell interativo
+  (`len=43`); `~/.bashrc` deduplicado para 1 linha `export` (600). Nota:
+  `resolve-library-id` exige AMBOS `libraryName` e `query` (erros de validação
+  observados com cada um isolado).
 - [x] Versionar evoluções por commit — em dia: 2 commits em `main`
   (`a67f12a`, `4de6f7b`) + branches `dev` / `homologacao` criadas de `main`.
 - [x] Avaliar promoção das skills `systematic-debugging` / `durable-test-collateral`.
