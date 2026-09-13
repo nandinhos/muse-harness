@@ -76,8 +76,10 @@ melhoria; `diff -r` periódico contra cópias).
   Prova funcional plena (busca 200) exige sessão pós-restart — registrar então.
 - [x] Versionar evoluções por commit — em dia: 2 commits em `main`
   (`a67f12a`, `4de6f7b`) + branches `dev` / `homologacao` criadas de `main`.
-- [ ] Avaliar promoção das skills `systematic-debugging` / `durable-test-collateral`.
-  (Em `dev` entrou primeiro `code-minimalism` opt-in, ADR 003.)
+- [x] Avaliar promoção das skills `systematic-debugging` / `durable-test-collateral`.
+  Decisão em `dev` (v0.3.0): `systematic-debugging` vendored como addon opt-in
+  `debugging` (corpo fiel, `cmp` OK); `durable-test-collateral` deliberadamente
+  externo (bundled, auto-load) — ver guia §11.
 - [x] Rotina `diff -r` canônico × instalações — entregue em `dev`:
   `profiles/clearer-muse/scripts/canonical-diff.sh` (exit 0 idêntico,
   1 deriva, 2 destino inválido; validado nos 3 casos).

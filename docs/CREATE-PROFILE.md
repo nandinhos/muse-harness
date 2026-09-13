@@ -105,5 +105,10 @@ Contrato do manifest (observado em `plugin.json` do clearer-muse, `schemaVersion
 - Versionar este repo (`git init` + commits por melhoria) — hoje o canônico ainda não
   tem histórico; cada promoção merece commit.
 - Espelhar `.githooks/pre-push`-like por projeto consumidor (gate local antes do push).
-- Próximos profiles candidatos: `durable-test-collateral` e `systematic-debugging`
-  como skills de primeira classe do harness.
+- `systematic-debugging` promovido em v0.3.0 como addon opt-in `debugging`
+  (`enabledDefault: false`) — primeira classe seria custo permanente (~2,4k tok)
+  para um gatilho eventual (só `bug/erro/regressão`).
+- `durable-test-collateral` permanece EXTERNO (skill bundled, auto-load por
+  gatilho): vendorizar duplicaria fonte de verdade do produto. Regra de
+  pareamento: gates 1/4 do `debugging` geram o teste; o collateral decide a
+  guarda permanente.
