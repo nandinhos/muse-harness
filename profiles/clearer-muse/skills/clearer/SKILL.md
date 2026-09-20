@@ -47,11 +47,27 @@ O plugin não declara `agents` (família não suportada no Muse): os papéis sã
 
 Gestão por exceção: só transfira ao humano (handoff) diante de (1) ambiguidade real, (2) `WARN`/`DENY` do safety-gate, (3) teste falhando após 1 auto-reparo fundamentado, ou (4) risco `HIGH`.
 
-## 5. Compatibilidade DEVORQ deste repo
+## 5. Roteamento de skills
+
+| Objetivo | Skill |
+|---|---|
+| Nova funcionalidade | `clearer-feature` |
+| Bug / erro / regressão | `debugging` (porte do `clearer-bugfix`: 5 gates, RFC 2119) |
+| Refatoração sem mudar comportamento | `clearer-refactor` (baseline verde antes/depois) |
+| Revisão adversarial de diff | `clearer-review` (7 checks SIM/NÃO, BLOCKER→INFO) |
+| Execução auditável de testes | `clearer-test` (contrato COMMAND/EXIT/STATUS) |
+| Auditoria de claims | `clearer-audit` (SUPPORTED/PARTIALLY/UNSUPPORTED) |
+| Mapa read-only do codebase | `clearer-map` |
+| Regras nucleares (env, CI gate, branches) | `clearer-rules` |
+| Lição / memória técnica | `learned-lesson` (título≤80 + 4 seções) |
+| Hiperfoco / resposta direta (opt-in) | `clearer-adhd` |
+| Economia de tokens (opt-in) | `token-economy` + `code-minimalism` |
+
+## 6. Compatibilidade DEVORQ deste repo
 
 Response Contract alimenta `devorq verify`; commits seguem a convenção do projeto (pt-BR, prefixo `feat|fix|...`, sem `Co-Authored-By`); testes cobrem a área tocada (`vendor/bin/pest` ou `php artisan test`).
 
-## 6. Endosso externo (Context7, opcional)
+## 7. Endosso externo (Context7, opcional)
 
 O núcleo é repo-aterrado: código, comando e teste. Context7 (MCP `context7`, ver `.mcp.json`) endossa SOMENTE fatos externos — comportamento de versão de framework/lib, API canônica upstream. Regras:
 - Versão pinada sempre; sem pin, sem endosso.
@@ -59,6 +75,6 @@ O núcleo é repo-aterrado: código, comando e teste. Context7 (MCP `context7`, 
 - Endosso sem confirmação executável local continua `INFERRED`.
 - Sem MCP disponível, pule sem aviso e sem degradar o ciclo.
 
-## 7. Lições aprendidas (persistência)
+## 8. Lições aprendidas (persistência)
 
 Todo incidente com causa provada DEVE sair do turno como barreira ou registro, nesta ordem de força: (1) teste de regressão, hook ou gate no repo; (2) runbook; (3) nota de lição no formato canônico — título ≤80, tipo (`error|lesson|best-practice`), stack, escopo + 4 seções (Sintoma, Causa Raiz, Solução Canônica, Regra de Prevenção). Pergunte ao humano antes de persistir em memória; o default é relatório de leitura.

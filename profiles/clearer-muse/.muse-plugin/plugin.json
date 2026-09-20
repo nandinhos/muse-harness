@@ -1,1 +1,106 @@
-{"capabilities": {"commands": [{"enabledDefault": true, "id": "clearer-run", "path": "commands/clearer.md"}, {"enabledDefault": true, "id": "token-report", "path": "commands/token-report.md"}], "hooks": [{"command": ["python3", "hooks/safety-gate.py"], "event": "PreToolUse", "id": "safety-gate", "statusMessage": "Avaliando safety-gate por ambiente", "timeoutMs": 5000}], "mcpServers": [], "reminders": [], "skills": [{"enabledDefault": true, "id": "clearer", "path": "skills/clearer/SKILL.md"}, {"enabledDefault": true, "id": "token-economy", "path": "skills/token-economy/SKILL.md"}, {"enabledDefault": false, "id": "code-minimalism", "path": "skills/code-minimalism/SKILL.md"}, {"enabledDefault": false, "id": "debugging", "path": "skills/debugging/SKILL.md"}]}, "compat": {"manifestDir": ".muse-plugin", "source": "native"}, "description": "Abstracao do CLEARER Engineering Harness para o Muse: ciclo CLEARER, Risk Dial, safety-gate por ambiente e addon de gestao de tokens, adaptados a este repositorio Laravel.", "displayName": "CLEARER Muse Harness", "name": "clearer-muse", "schemaVersion": 1, "version": "0.3.0"}
+{
+  "capabilities": {
+    "commands": [
+      {
+        "enabledDefault": true,
+        "id": "clearer-run",
+        "path": "commands/clearer.md"
+      },
+      {
+        "enabledDefault": true,
+        "id": "token-report",
+        "path": "commands/token-report.md"
+      }
+    ],
+    "hooks": [
+      {
+        "command": [
+          "python3",
+          "hooks/safety-gate.py"
+        ],
+        "event": "PreToolUse",
+        "id": "safety-gate",
+        "statusMessage": "Avaliando safety-gate por ambiente",
+        "timeoutMs": 5000
+      }
+    ],
+    "mcpServers": [],
+    "reminders": [],
+    "skills": [
+      {
+        "enabledDefault": true,
+        "id": "clearer",
+        "path": "skills/clearer/SKILL.md"
+      },
+      {
+        "enabledDefault": true,
+        "id": "token-economy",
+        "path": "skills/token-economy/SKILL.md"
+      },
+      {
+        "enabledDefault": false,
+        "id": "code-minimalism",
+        "path": "skills/code-minimalism/SKILL.md"
+      },
+      {
+        "enabledDefault": false,
+        "id": "debugging",
+        "path": "skills/debugging/SKILL.md"
+      },
+      {
+        "enabledDefault": true,
+        "id": "clearer-feature",
+        "path": "skills/clearer-feature/SKILL.md"
+      },
+      {
+        "enabledDefault": true,
+        "id": "clearer-refactor",
+        "path": "skills/clearer-refactor/SKILL.md"
+      },
+      {
+        "enabledDefault": true,
+        "id": "clearer-review",
+        "path": "skills/clearer-review/SKILL.md"
+      },
+      {
+        "enabledDefault": true,
+        "id": "clearer-test",
+        "path": "skills/clearer-test/SKILL.md"
+      },
+      {
+        "enabledDefault": true,
+        "id": "clearer-audit",
+        "path": "skills/clearer-audit/SKILL.md"
+      },
+      {
+        "enabledDefault": true,
+        "id": "clearer-map",
+        "path": "skills/clearer-map/SKILL.md"
+      },
+      {
+        "enabledDefault": true,
+        "id": "clearer-rules",
+        "path": "skills/clearer-rules/SKILL.md"
+      },
+      {
+        "enabledDefault": true,
+        "id": "learned-lesson",
+        "path": "skills/learned-lesson/SKILL.md"
+      },
+      {
+        "enabledDefault": false,
+        "id": "clearer-adhd",
+        "path": "skills/clearer-adhd/SKILL.md"
+      }
+    ]
+  },
+  "compat": {
+    "manifestDir": ".muse-plugin",
+    "source": "native"
+  },
+  "description": "Abstracao do CLEARER Engineering Harness para o Muse: ciclo CLEARER, Risk Dial, safety-gate por ambiente e addon de gestao de tokens, adaptados a este repositorio Laravel.",
+  "displayName": "CLEARER Muse Harness",
+  "name": "clearer-muse",
+  "schemaVersion": 1,
+  "version": "0.4.0"
+}
