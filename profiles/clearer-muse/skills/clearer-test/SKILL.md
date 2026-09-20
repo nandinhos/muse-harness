@@ -13,7 +13,7 @@ description: Execução determinística de testes com contrato auditável (COMMA
 bash scripts/test-runner.sh
 ```
 
-Ou comando canônico da stack (`./vendor/bin/pest`, `php artisan test`, `npm test`, `pytest`, `go test ./...`). Saídas verbosas via `scripts/compress-output.sh` (preserva exit code).
+Ou comando canônico da stack (`./vendor/bin/pest`, `php artisan test`, `npm test`, `pytest`, `go test ./...`). Saídas verbosas via `scripts/compress-output.sh` (preserva exit code). Suíte longa/async: `bash scripts/heartbeat.sh -- <comando>` (heartbeat 25s, exit preservado).
 
 ## 2. Contrato de registro
 

@@ -101,6 +101,73 @@ def detect_env(cwd: Path) -> tuple[str, str]:
     return "development", "fallback (workspace local)"
 
 
+def find_repo_root(start: Path) -> Path | None:
+    cur = start.resolve()
+    for parent in [cur, *cur.parents]:
+        if (parent / ".git").exists():
+            return parent
+    return None
+
+
+def check_pre_push_ci_gate(cmd: str, cwd: Path) -> str | None:
+    """Trava de tolerancia zero: push em repo com CI exige Certificado de Voo.
+
+    Retorna o motivo de DENY ou None quando o gate passa/nao se aplica.
+    O certificado e `.ceh/last-ci-run.json` (emitido por `scripts/test-runner.sh`):
+    `exit_code == 0`, `status == "PASS"` e `commit_hash == HEAD` atual.
+    """
+    if not re.search(r"\bgit\s+push\b", cmd):
+        return None
+    if re.search(r"--force|(?<!\S)-f(?!\S)|\+[a-zA-Z0-9_\-\./]+", cmd):
+        return None  # force push segue a avaliacao DESTRUCTIVE padrao
+    root = find_repo_root(cwd)
+    if root is None:
+        return None
+    wf_dir = root / ".github" / "workflows"
+    has_github_ci = wf_dir.is_dir() and bool(
+        list(wf_dir.glob("*.yml")) + list(wf_dir.glob("*.yaml"))
+    )
+    has_gitlab_ci = (root / ".gitlab-ci.yml").is_file()
+    if not (has_github_ci or has_gitlab_ci):
+        return None  # sem esteira de CI: push segue o fluxo padrao
+    cert = root / ".ceh" / "last-ci-run.json"
+    if not cert.is_file():
+        return (
+            "[PRE-PUSH CI GATE] push bloqueado: repo com CI sem Certificado de Voo "
+            "(`.ceh/last-ci-run.json` ausente). Rode a suite canonica integral "
+            "(`bash scripts/test-runner.sh`) com exit 0 antes do push"
+        )
+    try:
+        data = json.loads(cert.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return (
+            "[PRE-PUSH CI GATE] push bloqueado: certificado ilegivel "
+            f"({exc}). Regenere com a suite canonica integral"
+        )
+    if data.get("exit_code") != 0 or data.get("status") != "PASS":
+        return (
+            "[PRE-PUSH CI GATE] push bloqueado: ultima suite FALHOU "
+            f"(exit={data.get('exit_code')} status={data.get('status')}). "
+            "Corrija e reexecute com 100% de aprovacao antes do push"
+        )
+    try:
+        head = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=3,
+        )
+    except Exception:
+        head = None
+    current = head.stdout.strip() if head and head.returncode == 0 else ""
+    stamped = str(data.get("commit_hash", ""))
+    if stamped and stamped != "untracked" and current and stamped != current:
+        return (
+            "[PRE-PUSH CI GATE] push bloqueado: certificado de outro commit "
+            f"(cert={stamped[:7]} HEAD={current[:7]}). "
+            "Reexecute a suite integral no HEAD atual antes do push"
+        )
+    return None
+
+
 def extract_command() -> str:
     if len(sys.argv) > 1:
         return sys.argv[1]
@@ -156,6 +223,10 @@ def main() -> int:
             else:
                 print(f"CEH-SAFETY ALLOW {env} :: {reason} liberado p/ correcao com backup local ({evidence})")
             return 0
+    ci_deny = check_pre_push_ci_gate(command, cwd)
+    if ci_deny is not None:
+        print(f"CEH-SAFETY DENY {env} :: {ci_deny} ({evidence})")
+        return 0
     print(f"CEH-SAFETY ALLOW {env} :: sem padrao destrutivo ({evidence})")
     return 0
 

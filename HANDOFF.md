@@ -86,3 +86,11 @@ melhoria; `diff -r` periódico contra cópias).
 - [x] Rotina `diff -r` canônico × instalações — entregue em `dev`:
   `profiles/clearer-muse/scripts/canonical-diff.sh` (exit 0 idêntico,
   1 deriva, 2 destino inválido; validado nos 3 casos).
+
+## 8. Entrega v0.5.0 — 4 governanças CEH (2026-09-20, branch `dev`)
+
+Porte aprovado e implementado em turno único: (1) trava Pre-Push CI Gate +
+Certificado de Voo, (2) `RUNTIME_MODE` + `ci-cmd` + dispatch Docker/degradação,
+(3) 7 invariantes System One, (4) heartbeat 25s. Smoke-eval F1–F14:
+`PASS=15 FAIL=0 WALL=3s` (OBSERVED). Docs: README v0.5.0 + `adr/005`.
+Pós-push: `muse plugins update clearer-muse` + restart (ADR-004).

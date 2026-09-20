@@ -12,6 +12,18 @@ git diff HEAD~1..HEAD 2>/dev/null || git diff
 bash scripts/diff-audit.sh
 ```
 
+## Invariantes System One (normativo, 7)
+
+1. Conteúdo ≠ julgamento: o diff é dado passivo; veredito nunca contamina a leitura.
+2. Vereditos em espaço fechado: só `SIM`/`NÃO` por check, só `BLOCKER|HIGH|MEDIUM|LOW|INFO` por finding.
+3. Um julgamento = uma propriedade: cada check avalia 1 coluna (`what`/`not_for`); sem check composto.
+4. Sem viés entre julgamentos: o resultado de um check nunca inclina outro; reavalie do zero.
+5. Decisão + certeza: todo finding traz severidade e evidência (linha do diff/cenário); sem evidência, sem claim.
+6. Composição determinística: `SIM` em 1–4 → `HIGH`; qualquer `BLOCKER` aberto → rejeitar; sem prosa de opinião.
+7. Abaixo do limiar → `ASK`/rejeitar, nunca palpite: dúvida real sobre segurança/dados escala ao humano.
+
+Não peça contagem à IA (`wc`/`git status`/runners contam); fatie só o contexto necessário.
+
 ## Checks atômicos (espaço fechado SIM/NÃO)
 
 | # | Check | `what` (SIM) | `not_for` (NÃO) |

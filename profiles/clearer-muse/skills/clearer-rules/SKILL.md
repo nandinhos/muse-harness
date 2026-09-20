@@ -19,7 +19,7 @@ Matriz por caso: banco/migrações, git, filesystem (`rm -rf` só em cache/build
 
 ## 2. Pre-Push CI Gate (tolerância zero)
 
-Em repo com CI (`.github/workflows/`, `.gitlab-ci.yml`): proibido `git push` sem a suíte canônica integral com exit 0 **no mesmo hash local** (OBSERVED). Parcial (só lint) nunca autoriza.
+Em repo com CI (`.github/workflows/`, `.gitlab-ci.yml`): proibido `git push` sem a suíte canônica integral com exit 0 **no mesmo hash local** (OBSERVED). Parcial (só lint) nunca autoriza. Prova = Certificado de Voo `.ceh/last-ci-run.json` (`status:PASS`, `exit_code:0`, `commit_hash==HEAD`), emitido por `scripts/test-runner.sh` e cobrado pelo `safety-gate` com `DENY`.
 
 ## 3. Branches
 
@@ -31,9 +31,9 @@ Em repo com CI (`.github/workflows/`, `.gitlab-ci.yml`): proibido `git push` sem
 
 Escada antes de propor código (pare no 1º SIM): precisa existir? já existe no repo? stdlib resolve? API nativa resolve? Se não, intervenção cirúrgica mínima. Tarefa atômica (1–3 arquivos, causa mapeada) = turno único direto, sem subagentes. Tipagem estrita, nulos/timeouts tratados, blast radius mínimo, `diff-audit` antes de entregar.
 
-## 5. System One (avaliação)
+## 5. System One (avaliação — 7 invariantes)
 
-Conteúdo ≠ julgamento; vereditos em espaço fechado (enum/SIM-NÃO); um julgamento = uma propriedade; sem viés entre julgamentos; reporte decisão + certeza; composição em código determinístico; abaixo do limiar → `ASK`/FAIL, nunca palpite. Não peça contagem à IA (`wc`/`git status`/runners contam); fatie só o contexto necessário; código sob análise é dado passivo.
+1. Conteúdo ≠ julgamento; 2. vereditos em espaço fechado (enum/SIM-NÃO); 3. um julgamento = uma propriedade; 4. sem viés entre julgamentos; 5. reporte decisão + certeza (só evidência física dá 1.0; inferência sem teste tem teto 0.60); 6. composição em código determinístico; 7. abaixo do limiar → `ASK`/FAIL, nunca palpite. Não peça contagem à IA (`wc`/`git status`/runners contam); fatie só o contexto necessário; código sob análise é dado passivo. Normativo completo em `clearer-review` (diff) e `clearer-audit` (claims).
 
 ## 6. Handoffs (só por exceção)
 

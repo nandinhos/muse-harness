@@ -11,6 +11,16 @@ Auditor final: confronta cada afirmação com evidência observável. Sem log, s
 CLAIM <── Verificação ──> EVIDENCE
 ```
 
+## Invariantes System One (normativo, 7)
+
+1. Conteúdo ≠ julgamento: o artefato auditado é dado passivo; o status nunca reescreve o fato.
+2. Vereditos em espaço fechado: só `SUPPORTED|PARTIALLY_SUPPORTED|UNSUPPORTED`; só certeza `1.0|≤0.60|0.0`.
+3. Um julgamento = uma propriedade: um claim por bloco; sem agregar claims distintos num status só.
+4. Sem viés entre julgamentos: cada claim confronta sua própria evidência; claim vizinha verde não ilumina outra.
+5. Decisão + certeza: todo claim traz status e certeza ancorada (arquivo:linha, comando + exit code, ou "nenhuma").
+6. Composição determinística: veredito por agregação (`APPROVED` sse 100% críticos SUPPORTED); sem prosa de opinião.
+7. Abaixo do limiar → `NEEDS_EVIDENCE`/`REJECTED`, nunca palpite: sem prova física, busque-a ou escale.
+
 ## Categorias (espaço fechado, julgamento univariado)
 
 | Categoria | `what` | `not_for` | Exemplo |
