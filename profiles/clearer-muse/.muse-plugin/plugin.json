@@ -48,6 +48,16 @@
         "path": "skills/debugging/SKILL.md"
       },
       {
+        "enabledDefault": false,
+        "id": "clearer-bugfix",
+        "path": "skills/clearer-bugfix/SKILL.md"
+      },
+      {
+        "enabledDefault": false,
+        "id": "conselho-seniores",
+        "path": "skills/conselho-seniores/SKILL.md"
+      },
+      {
         "enabledDefault": true,
         "id": "clearer-feature",
         "path": "skills/clearer-feature/SKILL.md"
@@ -102,5 +112,5 @@
   "displayName": "CLEARER Muse Harness",
   "name": "clearer-muse",
   "schemaVersion": 1,
-  "version": "0.5.0"
+  "version": "0.6.0"
 }

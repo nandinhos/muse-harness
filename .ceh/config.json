@@ -1,0 +1,3 @@
+{
+  "canonical_test_command": "bash evals/run.sh"
+}

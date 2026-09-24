@@ -52,7 +52,7 @@ Gestão por exceção: só transfira ao humano (handoff) diante de (1) ambiguida
 | Objetivo | Skill |
 |---|---|
 | Nova funcionalidade | `clearer-feature` |
-| Bug / erro / regressão | `debugging` (porte do `clearer-bugfix`: 5 gates, RFC 2119) |
+| Bug / erro / regressão | `clearer-bugfix` (canônica: 5 gates, RFC 2119) ou `debugging` (addon opt-in equivalente) |
 | Refatoração sem mudar comportamento | `clearer-refactor` (baseline verde antes/depois) |
 | Revisão adversarial de diff | `clearer-review` (7 checks SIM/NÃO, BLOCKER→INFO) |
 | Execução auditável de testes | `clearer-test` (contrato COMMAND/EXIT/STATUS) |
@@ -61,6 +61,8 @@ Gestão por exceção: só transfira ao humano (handoff) diante de (1) ambiguida
 | Regras nucleares (env, CI gate, branches) | `clearer-rules` |
 | Lição / memória técnica | `learned-lesson` (título≤80 + 4 seções) |
 | Hiperfoco / resposta direta (opt-in) | `clearer-adhd` |
+| Banca multi-modelo 360º (opt-in) | `conselho-seniores` (`scripts/conselho-seniores.sh`) |
+| Auditoria estrutural de docs | `doc-audit` (`scripts/doc-audit.sh`, layout CEH) |
 | Economia de tokens (opt-in) | `token-economy` + `code-minimalism` |
 
 ## 6. Compatibilidade DEVORQ deste repo
