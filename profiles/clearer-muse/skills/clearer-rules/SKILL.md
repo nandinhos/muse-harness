@@ -5,7 +5,7 @@ description: Regras nucleares do CEH no Muse (ambientes, CI gate, branches, Pony
 
 # CLEARER Rules (Muse)
 
-Fonte consolidada das regras do harness. O dispatcher resume; aqui está o normativo. Origem: `clearer-engineering/rules/` (AGENTS, core, evidence, testing, git-safety, security, coding).
+Fonte consolidada das regras do harness. O dispatcher resume; aqui está o normativo. Origem: CEH **v1.3.0** (`clearer-engineering/rules/`: AGENTS, core, evidence, testing, git-safety, security, coding-policy). O `safety-gate` deste profile executa o motor `ceh_core` vendored (`hooks/vendor/ceh/`, ref `1b26e10`) — o veredito dele é o normativo, não esta página.
 
 ## 1. Ambientes e rigor
 
@@ -19,7 +19,7 @@ Matriz por caso: banco/migrações, git, filesystem (`rm -rf` só em cache/build
 
 ## 2. Pre-Push CI Gate (tolerância zero)
 
-Em repo com CI (`.github/workflows/`, `.gitlab-ci.yml`): proibido `git push` sem a suíte canônica integral com exit 0 **no mesmo hash local** (OBSERVED). Parcial (só lint) nunca autoriza. Prova = Certificado de Voo `.ceh/last-ci-run.json` (`status:PASS`, `exit_code:0`, `commit_hash==HEAD`), emitido por `scripts/test-runner.sh` e cobrado pelo `safety-gate` com `DENY`.
+Em repo com CI (`.github/workflows/`, `.gitlab-ci.yml`): proibido `git push` sem a suíte canônica integral com exit 0 **no mesmo hash local** (OBSERVED). Parcial (só lint) nunca autoriza. Prova = Certificado de Voo `.ceh/last-ci-run.json` (`status:PASS`, `exit_code:0`, `commit_hash` cobrindo o refspec, `canonical_verified:true`), emitido por `scripts/test-runner.sh` e cobrado pelo `safety-gate` (motor `ceh_core`) com `DENY` para **todo** push — inclusive `--force` — sem certificado.
 
 ## 3. Branches
 

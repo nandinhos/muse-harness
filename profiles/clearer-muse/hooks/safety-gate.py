@@ -1,233 +1,208 @@
 #!/usr/bin/env python3
-"""safety-gate.py — Safety Gate por ambiente para o plugin clearer-muse.
+"""safety-gate.py — Host adapter Muse sobre o motor de políticas `ceh_core`.
 
-Porte do `safety-gate.py` do CLEARER Engineering Harness (Antigravity),
-adaptado ao Muse e a este repositório (Laravel + Sail/Docker).
+Integração handoff-060 (Opção B, vendored): o veredito é calculado pelo motor
+vendored em `hooks/vendor/ceh/` (CEH v1.3.0, ref `1b26e10`). Este arquivo contém
+ZERO lógica de regra — só adaptação de formato para o protocolo nativo do Muse.
 
-- Detecta o ambiente (development/staging/production) via variáveis
-  (CEH_ENV/APP_ENV/NODE_ENV), arquivos `.env*` e branch Git atual.
-- Remove prefixo `rtk ` antes de avaliar (imunidade a evasão via compressor).
-- Entrada: `argv[1]` quando presente; senão, tenta JSON no stdin aceitando os
-  campos `command`, `tool_input.command` ou `input.command`.
-- Saída: linha de veredito `CEH-SAFETY <ALLOW|WARN|DENY> <ambiente> :: motivo`.
-- Saída SEMPRE 0 (consultivo): o protocolo de bloqueio do hook do Muse não é
-  documentado neste binário, então o veredito orienta o modelo via transcript
-  e a skill `clearer` o trata como vinculante. Não inventa negação.
+- `--check "<cmd>" [--env E]`: delega ao CLI do motor (JSON + exit 0/1/2).
+- `argv[1]` (comando) ou JSON no stdin (PreToolUse): avalia e emite UMA linha
+  `CEH-SAFETY <ALLOW|WARN|DENY> <ambiente> :: <motivo>`, exit SEMPRE 0
+  (contrato consultivo: veredito via transcript, tratado como vinculante
+  pela skill `clearer`; `ask` do motor vira `WARN` com os 2 alertas).
+- Payloads aceitos no stdin: formatos CEH (`toolCall`, `tool_input`/`tool_name`,
+  `cwd`) e legados Muse (`command`, `input.command`, string bruta).
+- CC1 (compensatório, ver `vendor/ceh/VENDOR.md`): `CATASTROPHIC_PATTERNS` do
+  próprio motor aplicados na linha bruta antes de delegar, pois o lexer FSM
+  fragmenta pipelines e o fork bomb não casaria em nenhum fragmento.
 """
 
+import importlib.util
+import io
 import json
 import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
-CATASTROPHIC = [
-    (r"\brm\s+-[rRfF]*[rR][rRfF]*\s+/(?:\s|$)", "delecao recursiva de '/'"),
-    (r"\brm\s+-[rRfF]*[rR][rRfF]*\s+~(?:\s|/|$)", "delecao recursiva de '~'"),
-    (r"\bmkfs\b", "formatacao de filesystem"),
-    (r"\bdd\s+if=.*of=/dev/", "escrita direta em disco via dd"),
-    (r":\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:", "fork bomb"),
-    (r"\bgcloud\s+projects\s+delete\b", "delecao de projeto GCP"),
-]
+HOOKS_DIR = Path(__file__).resolve().parent
+VENDOR_DIR = HOOKS_DIR / "vendor" / "ceh"
 
-SAFE_DEV = [
-    r"\brm\s+-[rRfF]+\s+(?:/tmp/|tmp/|\.tmp/|scratch/|\.cache/|dist/|build/|storage/framework/cache/|coverage/)",
-    r"\brm\s+-[rRfF]*[fF][rRfF]*\s+[a-zA-Z0-9_\-\./]+\.[a-zA-Z0-9]+(?:\s|$)",
-    r"\bgit\s+(?:checkout|restore)\s+(?![\.\-]\s*$)[a-zA-Z0-9_\-\./]+(?:\s|$)",
-]
+# Não poluir o vendor com __pycache__ (o canonical-diff.sh compara -r).
+sys.dont_write_bytecode = True
 
-DESTRUCTIVE = [
-    (r"\bDROP\s+(?:DATABASE|SCHEMA|TABLE|VIEW)\b", "SQL destrutivo (DROP)"),
-    (r"\bTRUNCATE(?:\s+TABLE)?\b", "SQL destrutivo (TRUNCATE)"),
-    (r"\bDELETE\s+FROM\s+\w+\s*(?:;\s*$|$)", "DELETE sem WHERE"),
-    (r"\b(?:artisan|php\s+artisan)\s+migrate:(?:fresh|reset)\b", "migration destrutiva (migrate:fresh/reset)"),
-    (r"\b(?:artisan|php\s+artisan)\s+db:wipe\b", "db:wipe"),
-    (r"\bgit\s+reset\s+--hard\b", "git reset --hard"),
-    (r"\bgit\s+clean\s+-[a-zA-Z]*f", "git clean -f"),
-    (r"\bgit\s+push\s+.*(?:--force|\+[a-zA-Z0-9_\-\./]+|(?<!\S)-f(?!\S))", "git push --force"),
-    (r"\brm\s+-[rRfF]+", "remocao recursiva/forçada (rm -rf)"),
-    (r"\bterraform\s+destroy\b", "terraform destroy"),
-    (r"\bkubectl\s+delete\s+(?:namespace|ns|deployment|statefulset|svc|all)\b", "kubectl delete"),
-    (r"\bdocker\s+system\s+prune\s+-a\b", "docker system prune -a"),
-    (r"\b(?:npm|pnpm|yarn)\s+publish\b", "publicacao de pacote"),
-]
+sys.path.insert(0, str(VENDOR_DIR))
 
+try:
+    from ceh_core.environment import detect_environment
+    from ceh_core.rules import CATASTROPHIC_PATTERNS
+    import hook_context
 
-def normalize_env(val: str) -> str | None:
-    v = val.strip().lower()
-    if any(t in v for t in ("prod", "live")):
-        return "production"
-    if any(t in v for t in ("stag", "homolog", "uat", "qa")):
-        return "staging"
-    if any(t in v for t in ("dev", "local", "test")):
-        return "development"
-    return None
-
-
-def detect_env(cwd: Path) -> tuple[str, str]:
-    for var in ("CEH_ENV", "APP_ENV", "NODE_ENV", "ENVIRONMENT", "ENV", "STAGE"):
-        raw = os.environ.get(var, "")
-        if raw:
-            env = normalize_env(raw)
-            if env:
-                return env, f"variavel {var}={raw}"
-    for name, env in ((".env.production", "production"), (".env.staging", "staging"), (".env.homolog", "staging")):
-        if (cwd / name).exists():
-            return env, f"arquivo {name} presente"
-    env_file = cwd / ".env"
-    if env_file.exists():
-        try:
-            for line in env_file.read_text().splitlines():
-                m = re.match(r"^(?:CEH_ENV|APP_ENV|NODE_ENV|ENVIRONMENT|ENV|STAGE)=(.*)$", line.strip())
-                if m:
-                    env = normalize_env(m.group(1).strip().strip("\"'"))
-                    if env:
-                        return env, f".env ({line.split('=')[0]}={m.group(1)})"
-        except OSError:
-            pass
-    try:
-        res = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, timeout=2, cwd=cwd)
-        branch = res.stdout.strip() if res.returncode == 0 else ""
-        if branch:
-            b = branch.lower()
-            if b in ("main", "master", "production", "prod"):
-                return "production", f"branch '{branch}'"
-            if any(t in b for t in ("stag", "homolog", "uat", "qa")):
-                return "staging", f"branch '{branch}'"
-            return "development", f"branch '{branch}'"
-    except Exception:
-        pass
-    return "development", "fallback (workspace local)"
-
-
-def find_repo_root(start: Path) -> Path | None:
-    cur = start.resolve()
-    for parent in [cur, *cur.parents]:
-        if (parent / ".git").exists():
-            return parent
-    return None
-
-
-def check_pre_push_ci_gate(cmd: str, cwd: Path) -> str | None:
-    """Trava de tolerancia zero: push em repo com CI exige Certificado de Voo.
-
-    Retorna o motivo de DENY ou None quando o gate passa/nao se aplica.
-    O certificado e `.ceh/last-ci-run.json` (emitido por `scripts/test-runner.sh`):
-    `exit_code == 0`, `status == "PASS"` e `commit_hash == HEAD` atual.
-    """
-    if not re.search(r"\bgit\s+push\b", cmd):
-        return None
-    if re.search(r"--force|(?<!\S)-f(?!\S)|\+[a-zA-Z0-9_\-\./]+", cmd):
-        return None  # force push segue a avaliacao DESTRUCTIVE padrao
-    root = find_repo_root(cwd)
-    if root is None:
-        return None
-    wf_dir = root / ".github" / "workflows"
-    has_github_ci = wf_dir.is_dir() and bool(
-        list(wf_dir.glob("*.yml")) + list(wf_dir.glob("*.yaml"))
+    _spec = importlib.util.spec_from_file_location(
+        "ceh_safety_gate", VENDOR_DIR / "safety-gate.py"
     )
-    has_gitlab_ci = (root / ".gitlab-ci.yml").is_file()
-    if not (has_github_ci or has_gitlab_ci):
-        return None  # sem esteira de CI: push segue o fluxo padrao
-    cert = root / ".ceh" / "last-ci-run.json"
-    if not cert.is_file():
-        return (
-            "[PRE-PUSH CI GATE] push bloqueado: repo com CI sem Certificado de Voo "
-            "(`.ceh/last-ci-run.json` ausente). Rode a suite canonica integral "
-            "(`bash scripts/test-runner.sh`) com exit 0 antes do push"
-        )
+    _ceh_gate = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_ceh_gate)
+    evaluate_command = _ceh_gate.evaluate_command
+    ENGINE_OK = True
+    ENGINE_ERR = ""
+except Exception as exc:  # motor ausente/quebrado: fail-closed no main
+    ENGINE_OK = False
+    ENGINE_ERR = str(exc)
+
+
+def _verdict_line(decision: str, env: str, reason: str) -> str:
+    first = next((ln for ln in reason.splitlines() if ln.strip()), "")
+    verdict = {"allow": "ALLOW", "ask": "WARN", "deny": "DENY"}.get(decision, "DENY")
+    return f"CEH-SAFETY {verdict} {env} :: {first}"
+
+
+def _detect_env(explicit_env, cmd_line: str, target_dir: Path):
     try:
-        data = json.loads(cert.read_text(encoding="utf-8"))
-    except Exception as exc:
-        return (
-            "[PRE-PUSH CI GATE] push bloqueado: certificado ilegivel "
-            f"({exc}). Regenere com a suite canonica integral"
-        )
-    if data.get("exit_code") != 0 or data.get("status") != "PASS":
-        return (
-            "[PRE-PUSH CI GATE] push bloqueado: ultima suite FALHOU "
-            f"(exit={data.get('exit_code')} status={data.get('status')}). "
-            "Corrija e reexecute com 100% de aprovacao antes do push"
-        )
-    try:
-        head = subprocess.run(
-            ["git", "-C", str(root), "rev-parse", "HEAD"],
-            capture_output=True, text=True, timeout=3,
-        )
+        return detect_environment(explicit_env, cmd_line, target_dir=target_dir)
     except Exception:
-        head = None
-    current = head.stdout.strip() if head and head.returncode == 0 else ""
-    stamped = str(data.get("commit_hash", ""))
-    if stamped and stamped != "untracked" and current and stamped != current:
-        return (
-            "[PRE-PUSH CI GATE] push bloqueado: certificado de outro commit "
-            f"(cert={stamped[:7]} HEAD={current[:7]}). "
-            "Reexecute a suite integral no HEAD atual antes do push"
-        )
+        return explicit_env or "production", "falha na detecção (fail-closed)"
+
+
+def _cc1_catastrophic(raw_cmd: str, explicit_env, eval_cwd: Path):
+    """CC1: padrões catastróficos do motor sobre a linha bruta. Retorna a linha
+    de veredito ou None."""
+    for pattern, desc in CATASTROPHIC_PATTERNS:
+        if re.search(pattern, raw_cmd, re.IGNORECASE):
+            env, ev = _detect_env(explicit_env, raw_cmd, eval_cwd)
+            return f"CEH-SAFETY DENY {env} :: bloqueio catastrofico: {desc} ({ev})"
     return None
 
 
-def extract_command() -> str:
-    if len(sys.argv) > 1:
-        return sys.argv[1]
+def _inside_plugin(path: Path) -> bool:
     try:
-        raw = sys.stdin.read()
-    except Exception:
-        return ""
-    if not raw.strip():
-        return ""
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError:
-        return raw
-    if isinstance(payload, dict):
-        for key in ("command",):
-            if isinstance(payload.get(key), str):
-                return payload[key]
-        for key in ("tool_input", "input"):
-            nested = payload.get(key)
-            if isinstance(nested, dict) and isinstance(nested.get("command"), str):
-                return nested["command"]
-    return raw
+        path.relative_to(HOOKS_DIR.parent)
+        return True
+    except ValueError:
+        return False
 
 
-def strip_rtk(cmd: str) -> str:
-    return re.sub(r"^\s*rtk\s+", "", cmd)
+def _resolve_eval_context(payload: dict):
+    """Devolve (eval_cwd, explicit_env, force_deny_push). Sem localização no
+    payload, herda o cwd (comportamento legado) exceto dentro do plugin
+    (P0/G6: fail-closed para production)."""
+    target_dir, explicit_env, force_deny_push = hook_context.resolve_hook_target(payload)
+    if target_dir is not None:
+        return target_dir, explicit_env, force_deny_push
+    cwd = Path.cwd()
+    if _inside_plugin(cwd.resolve()):
+        return cwd, "production", True
+    return cwd, None, False
+
+
+def _extract_terminal_command(payload: dict):
+    """Extrai (tool_name, command) nos formatos CEH ou legados Muse."""
+    if "toolCall" in payload or "tool_input" in payload or "tool_name" in payload:
+        return hook_context.extract_hook_command(payload)  # pode levantar ValueError
+    cmd = payload.get("command")
+    if not isinstance(cmd, str):
+        nested = payload.get("input")
+        cmd = nested.get("command") if isinstance(nested, dict) else None
+    tool = payload.get("tool") or payload.get("name") or ""
+    return str(tool), cmd if isinstance(cmd, str) else ""
+
+
+def _extract_file_target(payload: dict) -> str:
+    target = hook_context.extract_file_write_target("", payload)
+    if target:
+        return target
+    for key in ("file_path", "path"):
+        val = payload.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return ""
+
+
+def _evaluate_terminal(cmd: str, explicit_env, eval_cwd: Path, force_deny_push: bool) -> str:
+    if force_deny_push and hook_context.is_git_push_command(cmd):
+        return (
+            "CEH-SAFETY DENY production :: [CEH PRE-PUSH CI GATE] Push bloqueado: "
+            "repositório de destino não resolvido a partir do hook."
+        )
+    cc1 = _cc1_catastrophic(cmd, explicit_env, eval_cwd)
+    if cc1 is not None:
+        return cc1
+    decision, reason, env, _use_case = evaluate_command(
+        cmd, explicit_env, base_cwd=eval_cwd
+    )
+    if decision == "ask":
+        reason = (
+            "exige 2 alertas (1/2 impacto, 2/2 backup+rollback): "
+            + next((ln for ln in reason.splitlines() if ln.strip()), "")
+        )
+    return _verdict_line(decision, env, reason)
+
+
+def _evaluate_file_write(target: str, explicit_env, eval_cwd: Path) -> str:
+    env, _ev = _detect_env(explicit_env, "", eval_cwd)
+    if hook_context.is_protected_cert_file(target, eval_cwd):
+        return (
+            f"CEH-SAFETY DENY {env} :: [CEH CERTIFICATE INTEGRITY - G9] "
+            f"Tentativa de escrita em certificado de CI ({target}). "
+            "Arquivos sob .ceh/ são imutáveis via ferramentas de escrita."
+        )
+    return f"CEH-SAFETY ALLOW {env} :: escrita fora de .ceh/ ({target})"
+
+
+def _handle_payload(payload: dict) -> str:
+    try:
+        eval_cwd, explicit_env, force_deny_push = _resolve_eval_context(payload)
+    except ValueError as exc:
+        return f"CEH-SAFETY DENY production :: payload malformado (fail-closed): {exc}"
+    try:
+        _tool, cmd = _extract_terminal_command(payload)
+    except ValueError as exc:
+        return f"CEH-SAFETY DENY production :: payload malformado (fail-closed): {exc}"
+    if cmd.strip():
+        return _evaluate_terminal(cmd, explicit_env, eval_cwd, force_deny_push)
+    target = _extract_file_target(payload)
+    if target:
+        return _evaluate_file_write(target, explicit_env, eval_cwd)
+    env, ev = _detect_env(explicit_env, "", eval_cwd)
+    return f"CEH-SAFETY ALLOW {env} :: sem comando identificavel ({ev})"
 
 
 def main() -> int:
-    cwd = Path.cwd()
-    command = strip_rtk(extract_command())
-    env, evidence = detect_env(cwd)
-    if not command:
-        print(f"CEH-SAFETY ALLOW {env} :: sem comando identificavel ({evidence})")
+    if not ENGINE_OK:
+        print(
+            f"CEH-SAFETY DENY unknown :: motor ceh_core indisponível "
+            f"(fail-closed): {ENGINE_ERR}"
+        )
         return 0
-    for pattern, reason in CATASTROPHIC:
-        if re.search(pattern, command):
-            print(f"CEH-SAFETY DENY {env} :: bloqueio catastrofico: {reason} ({evidence})")
-            return 0
-    for pattern in SAFE_DEV:
-        if re.search(pattern, command):
-            print(f"CEH-SAFETY ALLOW {env} :: padrao seguro de dev ({evidence})")
-            return 0
-    for pattern, reason in DESTRUCTIVE:
-        if re.search(pattern, command):
-            if env == "production":
-                print(f"CEH-SAFETY DENY {env} :: {reason} proibido em producao ({evidence})")
-            elif env == "staging":
-                print(
-                    f"CEH-SAFETY WARN {env} :: {reason} exige 2 alertas: "
-                    f"(1/2) blast radius em homologacao, (2/2) backup + rollback verificados ({evidence})"
-                )
-            else:
-                print(f"CEH-SAFETY ALLOW {env} :: {reason} liberado p/ correcao com backup local ({evidence})")
-            return 0
-    ci_deny = check_pre_push_ci_gate(command, cwd)
-    if ci_deny is not None:
-        print(f"CEH-SAFETY DENY {env} :: {ci_deny} ({evidence})")
+    if len(sys.argv) > 1 and sys.argv[1] == "--check":
+        _ceh_gate.main()  # delega: JSON + exit 0/1/2 do motor
         return 0
-    print(f"CEH-SAFETY ALLOW {env} :: sem padrao destrutivo ({evidence})")
+    if len(sys.argv) > 1:
+        cmd = sys.argv[1]
+        cwd = Path.cwd()
+        if not cmd.strip():
+            env, ev = _detect_env(None, "", cwd)
+            print(f"CEH-SAFETY ALLOW {env} :: sem comando identificavel ({ev})")
+            return 0
+        print(_evaluate_terminal(cmd, None, cwd, False))
+        return 0
+    try:
+        raw = sys.stdin.read()
+    except Exception:
+        raw = ""
+    if not raw.strip():
+        env, ev = _detect_env(None, "", Path.cwd())
+        print(f"CEH-SAFETY ALLOW {env} :: sem comando identificavel ({ev})")
+        return 0
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        print(_evaluate_terminal(raw, None, Path.cwd(), False))
+        return 0
+    if not isinstance(payload, dict):
+        print(_evaluate_terminal(raw, None, Path.cwd(), False))
+        return 0
+    print(_handle_payload(payload))
     return 0
 
 

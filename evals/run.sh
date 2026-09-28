@@ -47,11 +47,31 @@ gate "F2-deny-push-f-prod" prod "git push -f origin main" \
 # F3: catastrófico nega em qualquer ambiente, com motivo estruturado
 gate "F3-deny-catastrofico" prod "rm -rf /" \
   "CEH-SAFETY DENY" "bloqueio catastrofico"
-# F4: mesmo comando na branch dev (sem override) = ALLOW development + benigno verde
-gate "F4-allow-push-force-dev" branch "git push --force" \
-  "CEH-SAFETY ALLOW development"
+# F4: push --force em dev SEM CI (sandbox hermético) = ALLOW development.
+# (O F4 antigo rodava no próprio repo, que TEM CI: o motor CEH v1.3.0 aplica o
+# Pre-Push CI Gate a TODO push — inclusive force — sem certificado, então aquele
+# cenário virou o F4c. Intenção preservada: dev sem CI permite push.)
+TMPDEV=$(mktemp -d)
+git -C "$TMPDEV" init -q -b dev 2>/dev/null
+git -C "$TMPDEV" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init 2>/dev/null
+F4OUT="$(cd "$TMPDEV" && env -i PATH="$PATH" python3 "$HOOK" "git push --force" 2>&1)"; F4RC=$?
+if [[ "$F4OUT" == *"CEH-SAFETY ALLOW development"* && "$F4RC" -eq 0 ]]; then PASS=$((PASS+1)); echo "PASS F4-allow-push-force-dev";
+else FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST F4-allow-push-force-dev"; echo "FAIL F4-allow-push-force-dev :: out=[$F4OUT] rc=$F4RC"; fi
+rm -rf "$TMPDEV"
 gate "F4b-allow-benigno-dev" branch "git status" \
   "CEH-SAFETY ALLOW development"
+# F4c: push em dev COM CI mas sem certificado = DENY (PR-08/G7: todo push,
+# inclusive force, exige a suíte canônica verde. Fecha o furo do gate antigo,
+# que isentava force-push do CI gate e liberava em dev.)
+TMPF4C=$(mktemp -d)
+git -C "$TMPF4C" init -q -b dev 2>/dev/null
+git -C "$TMPF4C" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init 2>/dev/null
+mkdir -p "$TMPF4C/.github/workflows"
+printf 'name: ci\non: [push]\njobs:\n  t:\n    runs-on: ubuntu-latest\n    steps:\n      - run: ./vendor/bin/pest\n' > "$TMPF4C/.github/workflows/ci.yml"
+F4COUT="$(cd "$TMPF4C" && env -i PATH="$PATH" python3 "$HOOK" "git push origin dev" 2>&1)"; F4CRC=$?
+if [[ "$F4COUT" == *"CEH-SAFETY DENY"* && "$F4COUT" == *"PRE-PUSH CI GATE"* && "$F4CRC" -eq 0 ]]; then PASS=$((PASS+1)); echo "PASS F4c-deny-push-dev-sem-cert";
+else FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST F4c-deny-push-dev-sem-cert"; echo "FAIL F4c-deny-push-dev-sem-cert :: out=[$F4COUT] rc=$F4CRC"; fi
+rm -rf "$TMPF4C"
 # F5: sem comando identificável = fallback estruturado, exit 0
 gate "F5-fallback-sem-comando" prod "" \
   "CEH-SAFETY ALLOW production" "sem comando identificavel"
@@ -75,6 +95,7 @@ gate "F8-deny-migrate-fresh-prod" prod "php artisan migrate:fresh" \
 TMPREP=$(mktemp -d)
 git -C "$TMPREP" init -q 2>/dev/null
 git -C "$TMPREP" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init 2>/dev/null
+git -C "$TMPREP" branch dev 2>/dev/null
 mkdir -p "$TMPREP/.github/workflows"
 printf 'name: ci\non: [push]\njobs:\n  t:\n    runs-on: ubuntu-latest\n    steps:\n      - run: ./vendor/bin/pest\n' > "$TMPREP/.github/workflows/ci.yml"
 F9OUT="$(cd "$TMPREP" && env -i PATH="$PATH" python3 "$HOOK" "git push origin dev" 2>&1)"; F9RC=$?
@@ -83,12 +104,15 @@ else FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST F9-deny-push-sem-cert"; echo "F
 # F10: certificado valido no HEAD = ALLOW
 HEADH=$(git -C "$TMPREP" rev-parse HEAD 2>/dev/null)
 mkdir -p "$TMPREP/.ceh"
-printf '{"commit_hash": "%s", "timestamp": "2026-01-01T00:00:00Z", "command": "./vendor/bin/pest", "status": "PASS", "exit_code": 0}' "$HEADH" > "$TMPREP/.ceh/last-ci-run.json"
+# Fixture simula corrida genuína da suíte canônica (o motor PR-08 exige
+# canonical_verified:true; sem ele, o cert é rejeitado mesmo com PASS).
+printf '{"commit_hash": "%s", "timestamp": "2026-01-01T00:00:00Z", "command": "./vendor/bin/pest", "canonical_verified": true, "status": "PASS", "exit_code": 0}' "$HEADH" > "$TMPREP/.ceh/last-ci-run.json"
 F10OUT="$(cd "$TMPREP" && env -i PATH="$PATH" python3 "$HOOK" "git push origin dev" 2>&1)"; F10RC=$?
 if [[ "$F10OUT" == *"CEH-SAFETY ALLOW"* && "$F10RC" -eq 0 ]]; then PASS=$((PASS+1)); echo "PASS F10-allow-push-com-cert";
 else FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST F10-allow-push-com-cert"; echo "FAIL F10-allow-push-com-cert :: out=[$F10OUT] rc=$F10RC"; fi
 # F11: certificado de outro commit (obsoleto) = DENY
 git -C "$TMPREP" -c user.email=t@t -c user.name=t commit -q --allow-empty -m two 2>/dev/null
+git -C "$TMPREP" branch -f dev 2>/dev/null
 F11OUT="$(cd "$TMPREP" && env -i PATH="$PATH" python3 "$HOOK" "git push origin dev" 2>&1)"; F11RC=$?
 if [[ "$F11OUT" == *"CEH-SAFETY DENY"* && "$F11OUT" == *"PRE-PUSH CI GATE"* && "$F11RC" -eq 0 ]]; then PASS=$((PASS+1)); echo "PASS F11-deny-cert-obsoleto";
 else FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST F11-deny-cert-obsoleto"; echo "FAIL F11-deny-cert-obsoleto :: out=[$F11OUT] rc=$F11RC"; fi
