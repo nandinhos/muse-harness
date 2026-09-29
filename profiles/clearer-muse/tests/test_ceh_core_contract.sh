@@ -3,7 +3,7 @@
 # C1-C4: os 4 smoke tests do handoff-060 §6 via --check (JSON + exit 0/1/2).
 # C5-C12: modos do adapter (stdin CEH/legado, G9, fork bomb nativo, fail-closed). Hermético.
 # C14: ergonomia CLI --command/--cwd (handoff-061).
-# C15: payload JSON via argv[1] roteia p/ handler (hook test facility).
+# C15: payload JSON via argv[1] roteia p/ handler (harness sem stdin).
 # C13: integridade do bundle vendored (sha reproduzível pinado em VENDOR.md).
 # Uso: bash profiles/clearer-muse/tests/test_ceh_core_contract.sh (cwd: raiz; offline)
 set -u
