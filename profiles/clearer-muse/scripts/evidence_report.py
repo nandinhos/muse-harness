@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Porte de clearer-engineering/scripts/evidence_report.py (CEH v1.3.0, ref 1b26e10).
+# Porte de clearer-engineering/scripts/evidence_report.py (CEH v1.3.1, ref 6fc5a07; arquivo inalterado desde v1.3.0).
 # Delta único de host (1/1): detect_env() procura o safety-gate no layout do
 # profile Muse (../hooks/safety-gate.py) antes do layout upstream (irmão em
 # scripts/). Todo o resto é idêntico ao upstream — veredito calculado, nunca

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test_host_parity.sh — Paridade diff-audit/ceh-help Muse vs Antigravity (CEH v1.3.0).
+# test_host_parity.sh — Paridade diff-audit/ceh-help Muse vs Antigravity (CEH v1.3.1).
 # H1-H5 pinam o comportamento OBSERVED do porte em 2026-09-28; H6 compara ao vivo
 # quando o checkout upstream existe (CEH_UPSTREAM_DIR, default: irmão do repo).
 # Deltas deliberados de host (documentados, não gaps):

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test_evidence_contract.sh — Contrato do relatório canônico de evidências.
-# Espelho bash de clearer-engineering/tests/test_evidence_report.py (CEH v1.3.0):
+# Espelho bash de clearer-engineering/tests/test_evidence_report.py (CEH v1.3.1):
 # RESULT/CONFIDENCE são CALCULADOS pelo código, nunca declarados (Invariante 6).
 # E15-E17 cobrem a fiação do host Muse (adapter, D3, --json). Hermético.
 # Uso: bash profiles/clearer-muse/tests/test_evidence_contract.sh (cwd: raiz; offline)

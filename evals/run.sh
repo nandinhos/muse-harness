@@ -47,9 +47,9 @@ gate "F2-deny-push-f-prod" prod "git push -f origin main" \
   "CEH-SAFETY DENY production"
 # F3: catastrófico nega em qualquer ambiente, com motivo estruturado
 gate "F3-deny-catastrofico" prod "rm -rf /" \
-  "CEH-SAFETY DENY" "bloqueio catastrofico"
+  "CEH-SAFETY DENY" "CATASTROPHIC BLOCK"
 # F4: push --force em dev SEM CI (sandbox hermético) = ALLOW development.
-# (O F4 antigo rodava no próprio repo, que TEM CI: o motor CEH v1.3.0 aplica o
+# (O F4 antigo rodava no próprio repo, que TEM CI: o motor CEH aplica o
 # Pre-Push CI Gate a TODO push — inclusive force — sem certificado, então aquele
 # cenário virou o F4c. Intenção preservada: dev sem CI permite push.)
 TMPDEV=$(mktemp -d)

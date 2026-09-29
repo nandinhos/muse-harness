@@ -5,7 +5,7 @@ description: Regras nucleares do CEH no Muse (ambientes, CI gate, branches, Pony
 
 # CLEARER Rules (Muse)
 
-Fonte consolidada das regras do harness. O dispatcher resume; aqui está o normativo. Origem: CEH **v1.3.0** (`clearer-engineering/rules/`: AGENTS, core, evidence, testing, git-safety, security, coding-policy). O `safety-gate` deste profile executa o motor `ceh_core` vendored (`hooks/vendor/ceh/`, ref `1b26e10`) — o veredito dele é o normativo, não esta página.
+Fonte consolidada das regras do harness. O dispatcher resume; aqui está o normativo. Origem: CEH **v1.3.1** (`clearer-engineering/rules/`: AGENTS, core, evidence, testing, git-safety, security, coding-policy — inalteradas desde v1.3.0). O `safety-gate` deste profile executa o motor `ceh_core` vendored (`hooks/vendor/ceh/`, ref `6fc5a07`) — o veredito dele é o normativo, não esta página.
 
 ## 1. Ambientes e rigor
 

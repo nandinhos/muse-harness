@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # test_ceh_core_contract.sh — Contrato do motor ceh_core vendored + adapter Muse.
 # C1-C4: os 4 smoke tests do handoff-060 §6 via --check (JSON + exit 0/1/2).
-# C5-C12: modos do adapter (stdin CEH/legado, G9, CC1, fail-closed). Hermético.
+# C5-C12: modos do adapter (stdin CEH/legado, G9, fork bomb nativo, fail-closed). Hermético.
+# C14: ergonomia CLI --command/--cwd (handoff-061).
 # C13: integridade do bundle vendored (sha reproduzível pinado em VENDOR.md).
 # Uso: bash profiles/clearer-muse/tests/test_ceh_core_contract.sh (cwd: raiz; offline)
 set -u
@@ -78,17 +79,25 @@ C10OUT="$(echo '{"tool_name":"Read","tool_input":{},"cwd":"/tmp"}' | env -i PATH
 if [[ "$C10OUT" == *'CEH-SAFETY ALLOW'* && "$C10RC" -eq 0 ]]; then ok "C10-passthrough-allow";
 else bad "C10-passthrough-allow" "rc=$C10RC out=[$C10OUT]"; fi
 
-# --- CC1: fork bomb negado pelo adapter (motor puro permite; ver VENDOR.md) ---
+# --- C11: fork bomb negado pelo motor (early check, handoff-061; CC1 removido) ---
 TMPFB=$(mktemp -d)
 C11OUT="$(cd "$TMPFB" && env -i PATH="$PATH" python3 "$HOOK" ':(){ :|:& };:' 2>&1)"; C11RC=$?
-if [[ "$C11OUT" == *'CEH-SAFETY DENY'* && "$C11OUT" == *'bloqueio catastrofico'* && "$C11RC" -eq 0 ]]; then ok "C11-cc1-forkbomb-deny";
-else bad "C11-cc1-forkbomb-deny" "rc=$C11RC out=[$C11OUT]"; fi
+if [[ "$C11OUT" == *'CEH-SAFETY DENY'* && "$C11OUT" == *'CATASTROPHIC BLOCK'* && "$C11OUT" == *'Fork bomb'* && "$C11RC" -eq 0 ]]; then ok "C11-forkbomb-engine-deny";
+else bad "C11-forkbomb-engine-deny" "rc=$C11RC out=[$C11OUT]"; fi
 rm -rf "$TMPFB"
 
 # --- Payload malformado = fail-closed DENY ---
 C12OUT="$(echo '{"toolCall": "xx"}' | env -i PATH="$PATH" python3 "$HOOK" 2>&1)"; C12RC=$?
 if [[ "$C12OUT" == *'CEH-SAFETY DENY'* && "$C12RC" -eq 0 ]]; then ok "C12-malformado-deny";
 else bad "C12-malformado-deny" "rc=$C12RC out=[$C12OUT]"; fi
+
+# --- C14: ergonomia CLI --command (alias de --check) + --cwd (handoff-061) ---
+TMPC14=$(mktemp -d)
+chk "C14a-command-alias-allow" 0 '"decision": "allow"' -- \
+  env -i PATH="$PATH" python3 "$HOOK" --command "git status" --cwd "$TMPC14"
+chk "C14b-command-forkbomb-deny" 2 '"decision": "deny"' 'CATASTROPHIC' -- \
+  env -i PATH="$PATH" python3 "$HOOK" --command ':(){ :|:& };:' --cwd "$TMPC14"
+rm -rf "$TMPC14"
 
 # --- C13: bundle vendored íntegro (sha reproduzível pinado em VENDOR.md) ---
 VENDOR_DIR="$ROOT/profiles/clearer-muse/hooks/vendor/ceh"

@@ -2,26 +2,25 @@
 """safety-gate.py — Host adapter Muse sobre o motor de políticas `ceh_core`.
 
 Integração handoff-060 (Opção B, vendored): o veredito é calculado pelo motor
-vendored em `hooks/vendor/ceh/` (CEH v1.3.0, ref `1b26e10`). Este arquivo contém
+vendored em `hooks/vendor/ceh/` (CEH v1.3.1, ref `6fc5a07`). Este arquivo contém
 ZERO lógica de regra — só adaptação de formato para o protocolo nativo do Muse.
+(CC1 removido no handoff-061: o motor faz early catastrophic check na linha
+bruta; ver `vendor/ceh/VENDOR.md`.)
 
-- `--check "<cmd>" [--env E]`: delega ao CLI do motor (JSON + exit 0/1/2).
+- `--check "<cmd>" [--env E] [--cwd D]` (alias `--command`): delega ao CLI do
+  motor (JSON + exit 0/1/2).
 - `argv[1]` (comando) ou JSON no stdin (PreToolUse): avalia e emite UMA linha
   `CEH-SAFETY <ALLOW|WARN|DENY> <ambiente> :: <motivo>`, exit SEMPRE 0
   (contrato consultivo: veredito via transcript, tratado como vinculante
   pela skill `clearer`; `ask` do motor vira `WARN` com os 2 alertas).
 - Payloads aceitos no stdin: formatos CEH (`toolCall`, `tool_input`/`tool_name`,
   `cwd`) e legados Muse (`command`, `input.command`, string bruta).
-- CC1 (compensatório, ver `vendor/ceh/VENDOR.md`): `CATASTROPHIC_PATTERNS` do
-  próprio motor aplicados na linha bruta antes de delegar, pois o lexer FSM
-  fragmenta pipelines e o fork bomb não casaria em nenhum fragmento.
 """
 
 import importlib.util
 import io
 import json
 import os
-import re
 import sys
 from pathlib import Path
 
@@ -35,7 +34,6 @@ sys.path.insert(0, str(VENDOR_DIR))
 
 try:
     from ceh_core.environment import detect_environment
-    from ceh_core.rules import CATASTROPHIC_PATTERNS
     import hook_context
 
     _spec = importlib.util.spec_from_file_location(
@@ -62,16 +60,6 @@ def _detect_env(explicit_env, cmd_line: str, target_dir: Path):
         return detect_environment(explicit_env, cmd_line, target_dir=target_dir)
     except Exception:
         return explicit_env or "production", "falha na detecção (fail-closed)"
-
-
-def _cc1_catastrophic(raw_cmd: str, explicit_env, eval_cwd: Path):
-    """CC1: padrões catastróficos do motor sobre a linha bruta. Retorna a linha
-    de veredito ou None."""
-    for pattern, desc in CATASTROPHIC_PATTERNS:
-        if re.search(pattern, raw_cmd, re.IGNORECASE):
-            env, ev = _detect_env(explicit_env, raw_cmd, eval_cwd)
-            return f"CEH-SAFETY DENY {env} :: bloqueio catastrofico: {desc} ({ev})"
-    return None
 
 
 def _inside_plugin(path: Path) -> bool:
@@ -124,9 +112,6 @@ def _evaluate_terminal(cmd: str, explicit_env, eval_cwd: Path, force_deny_push: 
             "CEH-SAFETY DENY production :: [CEH PRE-PUSH CI GATE] Push bloqueado: "
             "repositório de destino não resolvido a partir do hook."
         )
-    cc1 = _cc1_catastrophic(cmd, explicit_env, eval_cwd)
-    if cc1 is not None:
-        return cc1
     decision, reason, env, _use_case = evaluate_command(
         cmd, explicit_env, base_cwd=eval_cwd
     )
@@ -174,8 +159,8 @@ def main() -> int:
             f"(fail-closed): {ENGINE_ERR}"
         )
         return 0
-    if len(sys.argv) > 1 and sys.argv[1] == "--check":
-        _ceh_gate.main()  # delega: JSON + exit 0/1/2 do motor
+    if len(sys.argv) > 1 and sys.argv[1] in ("--check", "--command"):
+        _ceh_gate.main()  # delega: JSON + exit 0/1/2 do motor (--env/--cwd inclusos)
         return 0
     if len(sys.argv) > 1:
         cmd = sys.argv[1]

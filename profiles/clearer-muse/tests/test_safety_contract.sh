@@ -37,10 +37,10 @@ check "dev-scratch-cleanup"        dev "rm -rf scratch/temp"       "CEH-SAFETY A
 check "dev-reset-hard-allow"       dev "git reset --hard HEAD~1"   "CEH-SAFETY ALLOW" "development"
 
 # --- CATASTRÓFICO: DENY absoluto em qualquer ambiente ---
-check "dev-catastrofico-rm-root"     dev "rm -rf /"           "CEH-SAFETY DENY" "bloqueio catastrofico"
-check "staging-catastrofico-rm-root" staging "rm -rf /"       "CEH-SAFETY DENY" "bloqueio catastrofico"
-check "prod-catastrofico-fork"       prod ':(){ :|:& };:'     "CEH-SAFETY DENY" "bloqueio catastrofico"
-check "dev-catastrofico-fork"        dev ':(){ :|:& };:'      "CEH-SAFETY DENY" "bloqueio catastrofico"
+check "dev-catastrofico-rm-root"     dev "rm -rf /"           "CEH-SAFETY DENY" "CATASTROPHIC BLOCK"
+check "staging-catastrofico-rm-root" staging "rm -rf /"       "CEH-SAFETY DENY" "CATASTROPHIC BLOCK"
+check "prod-catastrofico-fork"       prod ':(){ :|:& };:'     "CEH-SAFETY DENY" "CATASTROPHIC BLOCK"
+check "dev-catastrofico-fork"        dev ':(){ :|:& };:'      "CEH-SAFETY DENY" "CATASTROPHIC BLOCK"
 
 # --- PRODUÇÃO: destrutivos bloqueados ---
 check "prod-push-force"      prod "git push --force"         "CEH-SAFETY DENY" "production"

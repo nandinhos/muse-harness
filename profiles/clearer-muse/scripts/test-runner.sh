@@ -7,7 +7,7 @@
 #   com `canonical_verified` (comando executado == suíte canônica pinada em
 #   `.ceh/config.json` ou detectada). Só a suíte canônica autoriza `git push`.
 # - Worktree suja => testes rodam, mas o certificado NÃO é emitido (o cert
-#   precisa descrever o commit; fiel ao runner CEH v1.3.0).
+#   precisa descrever o commit; fiel ao runner CEH v1.3.1).
 # - Copia a saída bruta p/ `.ceh/last-ci-run.log` (D3), citada pelo evidence-report.
 set -u
 echo "=== [CEH test-runner] $(date -u +%Y-%m-%dT%H:%M:%SZ) | $PWD ==="

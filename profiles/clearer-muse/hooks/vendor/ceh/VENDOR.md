@@ -9,9 +9,9 @@
 | Item | Valor |
 |---|---|
 | Origem | `clearer-engineering/scripts/{ceh_core/,safety-gate.py,hook_context.py}` |
-| Ref validada | `1b26e10` (`staging`, CEH **v1.3.0**, handoff-060) |
-| Extração | `git archive 1b26e10 <paths>` (sem `__pycache__`) |
-| sha256 do bundle (13 arquivos `.py`) | `d89128dcde42475287851f39d9c2d3ff8ece0309310a291ecc757a2361918599` |
+| Ref validada | `6fc5a07` (`main`, CEH **v1.3.1**, handoff-061) |
+| Extração | `git archive 6fc5a07 <paths>` (sem `__pycache__`) |
+| sha256 do bundle (13 arquivos `.py`) | `6db34ff9e61b5b96650da3c22f0dea99dd3630607ce0f81bbd30ce2350e362ae` |
 | Verificação (reproduzível; cobrada em `C13`) | `(cd hooks/vendor/ceh && find . -type f -name '*.py' \| LC_ALL=C sort \| xargs sha256sum \| sha256sum)` |
 | Consumidor | `../safety-gate.py` (adapter fino do host Muse) |
 
@@ -28,9 +28,11 @@ git archive <nova-ref-validada> clearer-engineering/scripts/ceh_core \
 
 ## Controles compensatórios (adapter, não engine)
 
-- **CC1**: o adapter aplica `CATASTROPHIC_PATTERNS` do próprio motor sobre a linha
-  de comando **bruta** antes de delegar — o lexer FSM do motor fragmenta
-  pipelines (`;`, `&`), então o fork bomb clássico `:(){ :|:& };:` não casa o
-  padrão em nenhum fragmento e o motor puro retorna `allow` (OBSERVED em
-  2026-09-28, dev e production). CC1 usa os padrões do motor (zero lógica
-  duplicada) e deve ser removido quando o upstream corrigir a detecção.
+- **CC1 (REMOVIDO no handoff-061)**: o adapter aplicava `CATASTROPHIC_PATTERNS`
+  do próprio motor sobre a linha de comando **bruta** antes de delegar — o
+  lexer FSM do motor fragmentava pipelines (`;`, `&`), então o fork bomb
+  clássico `:(){ :|:& };:` não casava o padrão em nenhum fragmento e o motor
+  puro retornava `allow` (OBSERVED em 2026-09-28). O upstream corrigiu com
+  early catastrophic check em `evaluate_command()` (`main 6fc5a07`, CEH v1.3.1)
+  e o adapter voltou a delegar 100% ao motor. Nenhum controle compensatório
+  ativo no momento.
