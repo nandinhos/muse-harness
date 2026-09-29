@@ -3,6 +3,7 @@
 # C1-C4: os 4 smoke tests do handoff-060 §6 via --check (JSON + exit 0/1/2).
 # C5-C12: modos do adapter (stdin CEH/legado, G9, fork bomb nativo, fail-closed). Hermético.
 # C14: ergonomia CLI --command/--cwd (handoff-061).
+# C15: payload JSON via argv[1] roteia p/ handler (hook test facility).
 # C13: integridade do bundle vendored (sha reproduzível pinado em VENDOR.md).
 # Uso: bash profiles/clearer-muse/tests/test_ceh_core_contract.sh (cwd: raiz; offline)
 set -u
@@ -98,6 +99,11 @@ chk "C14a-command-alias-allow" 0 '"decision": "allow"' -- \
 chk "C14b-command-forkbomb-deny" 2 '"decision": "deny"' 'CATASTROPHIC' -- \
   env -i PATH="$PATH" python3 "$HOOK" --command ':(){ :|:& };:' --cwd "$TMPC14"
 rm -rf "$TMPC14"
+
+# --- C15: envelope JSON (event/stdin/tool_*) via argv[1] = payload, não shell ---
+C15OUT="$(env -i PATH="$PATH" python3 "$HOOK" '{"event":"PreToolUse","tool_name":"Bash","tool_input":{"command":"rm -rf /"},"cwd":"/tmp"}' 2>&1)"; C15RC=$?
+if [[ "$C15OUT" == *'CEH-SAFETY DENY'* && "$C15OUT" == *'CATASTROPHIC BLOCK'* && "$C15RC" -eq 0 ]]; then ok "C15-argv-json-payload-deny";
+else bad "C15-argv-json-payload-deny" "rc=$C15RC out=[$C15OUT]"; fi
 
 # --- C13: bundle vendored íntegro (sha reproduzível pinado em VENDOR.md) ---
 VENDOR_DIR="$ROOT/profiles/clearer-muse/hooks/vendor/ceh"

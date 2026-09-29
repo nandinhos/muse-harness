@@ -9,7 +9,7 @@ bruta; ver `vendor/ceh/VENDOR.md`.)
 
 - `--check "<cmd>" [--env E] [--cwd D]` (alias `--command`): delega ao CLI do
   motor (JSON + exit 0/1/2).
-- `argv[1]` (comando) ou JSON no stdin (PreToolUse): avalia e emite UMA linha
+- `argv[1]` (comando; dict JSON roteia p/ payload) ou JSON no stdin (PreToolUse): avalia e emite UMA linha
   `CEH-SAFETY <ALLOW|WARN|DENY> <ambiente> :: <motivo>`, exit SEMPRE 0
   (contrato consultivo: veredito via transcript, tratado como vinculante
   pela skill `clearer`; `ask` do motor vira `WARN` com os 2 alertas).
@@ -164,6 +164,15 @@ def main() -> int:
         return 0
     if len(sys.argv) > 1:
         cmd = sys.argv[1]
+        try:
+            as_payload = json.loads(cmd)
+        except ValueError:
+            as_payload = None
+        if isinstance(as_payload, dict):
+            # Harness passou o payload via argv (ex: `muse plugins hook test`):
+            # roteia p/ o handler de payload em vez de avaliar o JSON como shell.
+            print(_handle_payload(as_payload))
+            return 0
         cwd = Path.cwd()
         if not cmd.strip():
             env, ev = _detect_env(None, "", cwd)
