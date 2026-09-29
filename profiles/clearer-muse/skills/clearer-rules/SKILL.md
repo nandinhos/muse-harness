@@ -38,3 +38,7 @@ Escada antes de propor código (pare no 1º SIM): precisa existir? já existe no
 ## 6. Handoffs (só por exceção)
 
 Pare e transfira ao humano apenas ante: (1) ambiguidade real excludente, (2) `WARN`/`DENY` do safety-gate, (3) teste falhando após 1 auto-reparo fundamentado, (4) risco `HIGH`. Sem exceção: entregue concluído + testado + auditado.
+
+## 7. Veredito calculado (Invariante 6)
+
+**O código detém o veredito**: RESULT e CONFIDENCE do Response Contract são calculados por `scripts/evidence-report.sh` (git + certificados `.ceh/` + provas com sha256), nunca declarados pelo agente. Afirmação sem prova versionada e intacta é `PARTIALLY_SUPPORTED`/`UNSUPPORTED`, não fato. Proibido afirmar "testado", "corrigido" ou "sem regressão" sem comando + exit code + saída registrados; `evidence-report.sh --strict` barra veredito não-`VERIFICADO`.

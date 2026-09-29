@@ -11,7 +11,8 @@
 | Origem | `clearer-engineering/scripts/{ceh_core/,safety-gate.py,hook_context.py}` |
 | Ref validada | `1b26e10` (`staging`, CEH **v1.3.0**, handoff-060) |
 | Extração | `git archive 1b26e10 <paths>` (sem `__pycache__`) |
-| sha256 do bundle (13 arquivos) | `c43c8be4c922e2b731c89518361f0ed32dc819933acab1c515e656f796993ba2` |
+| sha256 do bundle (13 arquivos `.py`) | `d89128dcde42475287851f39d9c2d3ff8ece0309310a291ecc757a2361918599` |
+| Verificação (reproduzível; cobrada em `C13`) | `(cd hooks/vendor/ceh && find . -type f -name '*.py' \| LC_ALL=C sort \| xargs sha256sum \| sha256sum)` |
 | Consumidor | `../safety-gate.py` (adapter fino do host Muse) |
 
 ## Atualização

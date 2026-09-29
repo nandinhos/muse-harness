@@ -1,3 +1,5 @@
 *:Zone.Identifier
+__pycache__/
 .ceh/last-ci-run.json
 .ceh/last-ci-run.log
+.ceh/last-evals-run.json

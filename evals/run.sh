@@ -17,6 +17,7 @@ if [[ ! -x "$HOOK" && ! -f "$HOOK" ]]; then
   echo "INFRA-FAIL: hook ausente ou ilegível: $HOOK (gate silenciosamente ausente é pior que sessão brickada — ADR-004)"
   exit 1
 fi
+rm -f "$ROOT/.ceh/last-evals-run.json"  # cert obsoleto nunca persiste (fiel ao evals CEH)
 
 # gate <nome> <env-setup> <comando> <tokens-esperados...>
 # env-setup: "prod" | "staging" | "branch" (branch atual do repo, sem overrides)
@@ -135,5 +136,18 @@ else FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST F14-heartbeat-exit"; echo "FAIL
 WALL=$((SECONDS-START))
 echo "---"
 echo "PASS=$PASS FAIL=$FAIL WALL=${WALL}s$([ -n "$FAILED_LIST" ] && echo " FAILED:$FAILED_LIST")"
+# --- Certificado de evals p/ o evidence-report (schema fiel ao evals CEH) ---
+mkdir -p "$ROOT/.ceh" 2>/dev/null || true
+EVAL_COMMIT=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo "untracked")
+EVAL_VERDICT="APROVA"; [[ "$FAIL" -eq 0 ]] || EVAL_VERDICT="DESCARTA"
+cat > "$ROOT/.ceh/last-evals-run.json" <<EOF
+{
+  "commit": "$EVAL_COMMIT",
+  "verdict": "$EVAL_VERDICT",
+  "passed": $PASS,
+  "total": $((PASS+FAIL)),
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
 if [[ "$WALL" -ge 60 ]]; then echo "TETO-FAIL: parede >= 60s"; exit 1; fi
 [[ "$FAIL" -eq 0 ]]

@@ -8,6 +8,7 @@
 #   `.ceh/config.json` ou detectada). Só a suíte canônica autoriza `git push`.
 # - Worktree suja => testes rodam, mas o certificado NÃO é emitido (o cert
 #   precisa descrever o commit; fiel ao runner CEH v1.3.0).
+# - Copia a saída bruta p/ `.ceh/last-ci-run.log` (D3), citada pelo evidence-report.
 set -u
 echo "=== [CEH test-runner] $(date -u +%Y-%m-%dT%H:%M:%SZ) | $PWD ==="
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
@@ -82,7 +83,9 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   fi
 fi
 echo "COMMAND: $CMD"
-set +e; $CMD; CODE=$?; set -e
+OUTPUT_FILE=$(mktemp)
+set +e; $CMD >"$OUTPUT_FILE" 2>&1; CODE=$?; set -e
+cat "$OUTPUT_FILE"
 echo "EXIT CODE: $CODE"
 [[ $CODE -eq 0 ]] && echo "STATUS: PASS" || echo "STATUS: FAIL"
 # --- Certificado de Voo p/ o Pre-Push CI Gate (commit exato + exit 0 + canônico) ---
@@ -99,5 +102,7 @@ if [[ $WORKTREE_DIRTY -eq 0 ]] && mkdir -p "$REPO_ROOT/.ceh" 2>/dev/null && [[ -
   "exit_code": $CODE
 }
 EOF
+  cp "$OUTPUT_FILE" "$REPO_ROOT/.ceh/last-ci-run.log"  # D3: saída bruta citada pelo evidence-report
 fi
+rm -f "$OUTPUT_FILE"
 exit $CODE

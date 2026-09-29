@@ -2,6 +2,7 @@
 # test_ceh_core_contract.sh — Contrato do motor ceh_core vendored + adapter Muse.
 # C1-C4: os 4 smoke tests do handoff-060 §6 via --check (JSON + exit 0/1/2).
 # C5-C12: modos do adapter (stdin CEH/legado, G9, CC1, fail-closed). Hermético.
+# C13: integridade do bundle vendored (sha reproduzível pinado em VENDOR.md).
 # Uso: bash profiles/clearer-muse/tests/test_ceh_core_contract.sh (cwd: raiz; offline)
 set -u
 
@@ -88,6 +89,14 @@ rm -rf "$TMPFB"
 C12OUT="$(echo '{"toolCall": "xx"}' | env -i PATH="$PATH" python3 "$HOOK" 2>&1)"; C12RC=$?
 if [[ "$C12OUT" == *'CEH-SAFETY DENY'* && "$C12RC" -eq 0 ]]; then ok "C12-malformado-deny";
 else bad "C12-malformado-deny" "rc=$C12RC out=[$C12OUT]"; fi
+
+# --- C13: bundle vendored íntegro (sha reproduzível pinado em VENDOR.md) ---
+VENDOR_DIR="$ROOT/profiles/clearer-muse/hooks/vendor/ceh"
+C13SHA="$(cd "$VENDOR_DIR" && find . -type f -name '*.py' | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1)"
+C13N="$(cd "$VENDOR_DIR" && find . -type f -name '*.py' | wc -l)"
+C13PIN="$(grep -oE '^[|] sha256 do bundle.*`[0-9a-f]{64}`' "$VENDOR_DIR/VENDOR.md" | grep -oE '[0-9a-f]{64}' | head -n 1)"
+if [[ "$C13N" -eq 13 && -n "$C13PIN" && "$C13SHA" == "$C13PIN" ]]; then ok "C13-vendor-bundle-sha";
+else bad "C13-vendor-bundle-sha" "n=$C13N sha=$C13SHA pin=$C13PIN"; fi
 
 echo "---"
 echo "CEH-CORE-CONTRACT: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
