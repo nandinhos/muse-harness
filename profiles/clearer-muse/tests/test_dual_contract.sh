@@ -23,13 +23,14 @@ git -C "$TMPD" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init 
 run() {
   local name="$1" want_rc="$2" want_out="$3" want_err="$4"; shift 4
   [[ "$1" == "--" ]] && shift
-  local out err rc ok=1
+  local out err rc ok=1 errf
+  errf="$(mktemp)"
   if [[ -n "${STDIN_PAYLOAD:-}" ]]; then
-    out="$(printf '%s' "$STDIN_PAYLOAD" | "$@" 2>/tmp/dc-err.txt)"; rc=$?
+    out="$(printf '%s' "$STDIN_PAYLOAD" | "$@" 2>"$errf")"; rc=$?
   else
-    out="$("$@" 2>/tmp/dc-err.txt)"; rc=$?
+    out="$("$@" 2>"$errf")"; rc=$?
   fi
-  err="$(cat /tmp/dc-err.txt)"
+  err="$(cat "$errf")"; rm -f "$errf"
   [[ "$rc" -eq "$want_rc" ]] || ok=0
   [[ "$out" == *"$want_out"* ]] || ok=0
   [[ "$err" == *"$want_err"* ]] || ok=0
@@ -73,6 +74,22 @@ run "D8-legado-dual" 0 '{}' 'CEH-SAFETY ALLOW' -- \
 # --- D10: malformado = block mecânico (o fix E19: antes era só advisory) ---
 STDIN_PAYLOAD='{"toolCall": "xx"}' \
 run "D10-malformado-block" 0 '"decision": "block"' 'CEH-SAFETY DENY production' -- \
+  env -i PATH="$PATH" python3 "$HOOK"
+
+# --- D11/D12 (conselho F4.2): legado fail-closed p/ tipos errados ---
+STDIN_PAYLOAD='{"tool_name":"Bash","tool_input":"rm -rf /","cwd":"/tmp"}' \
+run "D11-legacy-nondict-block" 0 '"decision": "block"' 'CEH-SAFETY DENY production' -- \
+  env -i PATH="$PATH" python3 "$HOOK"
+STDIN_PAYLOAD='{"tool_name":"Bash","tool_input":{"command":["rm","-rf","/"]},"cwd":"/tmp"}' \
+run "D12-legacy-listcmd-block" 0 '"decision": "block"' 'CEH-SAFETY DENY production' -- \
+  env -i PATH="$PATH" python3 "$HOOK"
+
+# --- D13/D14 (conselho F4.2): tráfego real quente (E19: 42% reminder) ---
+STDIN_PAYLOAD='{"tool_name":"submit_reminder_decision","tool_input":{"decision":"none"},"model_provider":"meta","turn_id":"t","cwd":"/tmp"}' \
+run "D13-reminder-allow" 0 '{}' 'CEH-SAFETY ALLOW' -- \
+  env -i PATH="$PATH" python3 "$HOOK"
+STDIN_PAYLOAD='{"tool_name":"edit_file","tool_input":{"path":".ceh/x"},"model_provider":"meta","turn_id":"t","cwd":"'"$TMPD"'"}' \
+run "D14-edit-ceh-deny" 0 '"decision": "block"' 'G9' -- \
   env -i PATH="$PATH" python3 "$HOOK"
 
 rm -rf "$TMPD"

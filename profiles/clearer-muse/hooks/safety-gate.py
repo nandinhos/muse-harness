@@ -159,9 +159,11 @@ def _legacy_target(payload: dict[str, Any]) -> tuple[Path, str | None, bool]:
     Sem localização no payload, herda o cwd (comportamento legado) exceto dentro
     do plugin (P0/G6: fail-closed para production).
     """
-    ti = payload.get("tool_input")
-    ti = ti if isinstance(ti, dict) else {}
+    ti_raw = payload.get("tool_input")
+    ti = ti_raw if isinstance(ti_raw, dict) else {}
     raw = ti.get("workdir") or payload.get("cwd")
+    if raw is not None and not isinstance(raw, str):
+        return Path.cwd(), "production", True
     if isinstance(raw, str) and raw:
         cand = Path(os.path.expanduser(raw))
         if cand.is_absolute() and cand.is_dir():
@@ -178,22 +180,40 @@ def _legacy_extract(payload: dict[str, Any]) -> tuple[str, str, str]:
     if "toolCall" in payload:
         return ("malformed", "", "formato estrangeiro (toolCall Antigravity)")
     tool = str(payload.get("tool_name", "") or payload.get("tool", "") or "")
-    ti = payload.get("tool_input")
-    ti = ti if isinstance(ti, dict) else {}
+    # Fail-closed estrito (conselho F4.2): chave presente com tipo errado é
+    # payload malformado (o hook_context antigo levantava ValueError aqui).
+    ti_raw = payload.get("tool_input")
+    if ti_raw is not None and not isinstance(ti_raw, dict):
+        return ("malformed", "", "tool_input não-objeto (fail-closed)")
+    ti = ti_raw if isinstance(ti_raw, dict) else {}
+    if "command" in ti and not isinstance(ti["command"], str):
+        return ("malformed", "", "tool_input.command não-string (fail-closed)")
+    if ("path" in ti and not isinstance(ti["path"], str)) or (
+        "file_path" in ti and not isinstance(ti["file_path"], str)
+    ):
+        return ("malformed", "", "tool_input.path não-string (fail-closed)")
     cmd = ti.get("command")
     if isinstance(cmd, str) and cmd.strip():
         return ("terminal", tool, cmd)
     path = ti.get("path") or ti.get("file_path")
     if isinstance(path, str) and path.strip():
         return ("file", tool, path.strip())
+    if "command" in payload and not isinstance(payload["command"], str):
+        return ("malformed", "", "command não-string (fail-closed)")
     cmd = payload.get("command")
+    if cmd is None and "input" in payload and not isinstance(payload["input"], dict):
+        return ("malformed", "", "input não-objeto (fail-closed)")
     if not isinstance(cmd, str):
         nested = payload.get("input")
         cmd = nested.get("command") if isinstance(nested, dict) else None
+        if cmd is not None and not isinstance(cmd, str):
+            return ("malformed", "", "input.command não-string (fail-closed)")
     if isinstance(cmd, str) and cmd.strip():
         return ("terminal", tool, cmd)
     for key in ("file_path", "path"):
         val = payload.get(key)
+        if val is not None and not isinstance(val, str):
+            return ("malformed", "", f"{key} não-string (fail-closed)")
         if isinstance(val, str) and val.strip():
             return ("file", tool, val.strip())
     if tool or ti or payload.get("cwd") is not None:

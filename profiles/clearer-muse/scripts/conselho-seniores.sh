@@ -247,7 +247,12 @@ if ! python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import ceh_core.re
   echo -e "${RED}Erro: redação de segredos indisponível (fail-closed): $VENDOR_DIR sem ceh_core.redact. Nada foi enviado.${RESET}" >&2
   exit 1
 fi
-CONTEXT_PAYLOAD="$(printf '%s' "$CONTEXT_PAYLOAD" | python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); from ceh_core.redact import redact_payload; sys.stdout.write(redact_payload(sys.stdin.read()))' "$VENDOR_DIR")"
+REDACTED_OUT="$(printf '%s' "$CONTEXT_PAYLOAD" | python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); from ceh_core.redact import redact_payload, HOME_PATHS_REGEX; raw = sys.stdin.read(); red = redact_payload(raw); sys.stdout.write(str(red.count("REDACTED_") + len(HOME_PATHS_REGEX.findall(raw))) + "\n" + red)' "$VENDOR_DIR")"
+NREDACT="$(printf '%s' "$REDACTED_OUT" | head -n 1)"
+CONTEXT_PAYLOAD="$(printf '%s' "$REDACTED_OUT" | tail -n +2)"
+if [[ "$NREDACT" -gt 0 ]]; then
+  CONTEXT_PAYLOAD="[AVISO CEH: $NREDACT trecho(s) redigido(s) — tokens viraram REDACTED_*, caminhos de home viraram ~]\n$CONTEXT_PAYLOAD"
+fi
 
 get_agent_role() {
   local agent="$1"

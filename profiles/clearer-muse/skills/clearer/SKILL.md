@@ -16,7 +16,7 @@ Detecte com evidência (`git branch --show-current`, `APP_ENV`/`CEH_ENV`, `.env*
 | Ambiente | Sinais neste repo | Rigor |
 |---|---|---|
 | `DEV` / `TEST` | branch `dev*`, `APP_ENV=local|testing`, `.env` local | `ALLOW`: destrutivos liberados p/ correção, com backup/rollback local. `DENY` mantido p/ catástrofes de SO (`rm -rf /`, fork bomb, `mkfs`, `dd of=/dev/`). |
-| `HOMOLOGACAO` | branch `staging|homolog*`, `APP_ENV=staging`, `.env.staging` | `ASK`: 2 alertas explícitos — (1/2) blast radius no ambiente compartilhado, (2/2) backup executado + rollback verificado. |
+| `HOMOLOGACAO` | branch `staging|homolog*`, `APP_ENV=staging`, `.env.staging` | `ASK`→`block` mecânico no hook (v0.9.0/E19: o runtime só entende allow/block; `ask` vira `{"decision":"block"}` + `WARN` na trilha). Os 2 alertas — (1/2) blast radius compartilhado, (2/2) backup + rollback — valem para ações fora do hook (deploys, jobs, scripts manuais). |
 | `PRODUCAO` | branch `main|master`, `APP_ENV=production` | `DENY`: `migrate:fresh`, `db:wipe`, `DROP/TRUNCATE`, `git reset --hard`, `push --force`, `rm -rf`, `terraform destroy`, `kubectl delete`, `docker system prune -a` são proibidos. |
 
 O hook `safety-gate` emite o veredito no transcript; trate `WARN`/`DENY` dele como vinculante.

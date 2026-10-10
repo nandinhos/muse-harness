@@ -81,6 +81,7 @@ if PATH="$TCB:$PATH" bash "$SCR/conselho-seniores.sh" --dry-run --agent muse \
     --prompt "revisar token $FAKETOK em /home/alice/proj" \
     --output-dir "$TCOUT" >/dev/null 2>&1 \
   && grep -q "REDACTED_GIT_TOKEN" "$TCOUT/prompt_muse.txt" \
+  && grep -q "AVISO CEH: .*trecho(s) redigido(s)" "$TCOUT/prompt_muse.txt" \
   && ! grep -q "ghp_ABC" "$TCOUT/prompt_muse.txt" \
   && ! grep -q "/home/alice" "$TCOUT/prompt_muse.txt" \
   && ! grep -q "ghp_ABC" "$TCOUT/contexto_avaliado.txt"; then

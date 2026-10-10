@@ -42,3 +42,21 @@ Wrapper removido após a sonda; hook do cache restaurado byte-identical
 - `probe-redacted.log`: 12 disparos (5 bash, 5 submit_reminder_decision,
   2 write_file), 7 marcações CANARY; `session_id`/`tool_use_id`/`turn_id`
   redigidos via sed (comando registrado no HANDOFF da absorção).
+
+## Nota de classificação (pós-conselho F4.2 — honestidade de evidência)
+
+O log registra o lado do hook (o que foi emitido). O lado do runtime (o que o
+Muse fez com a resposta) foi observado no transcript da sessão, não persistido
+em arquivo — classificação honesta: PARTIALLY_SUPPORTED para a metade runtime:
+
+- bash + `{"decision":"block"}` → eco do runtime: `tool blocked by hook: E19
+  canary probe block` (chamada não executou).
+- write_file contendo o token canário → mesmo eco de bloqueio (prova
+  corroborada no disco: o wrapper-v1 teve de ser reescrito com o token fatiado
+  `_P = "CEH_CANARY" + "_PROBE_E19"` para conseguir ser gravado).
+- advisory `CEH-SAFETY DENY …` + exit 0 → chamada EXECUTADA (stdout entregue,
+  exit 0); depende só do transcript.
+
+Por isso o contrato dual (JSON impõe + stderr audita) é o desenho seguro nos
+dois mundos: se um runtime futuro ignorar o JSON, a trilha `CEH-SAFETY` continua
+vinculante pela skill; se só honrar o JSON (este runtime), o block é mecânico.

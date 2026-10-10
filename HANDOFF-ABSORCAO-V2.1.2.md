@@ -79,6 +79,24 @@ v2.1.2 (bundle `39db9e70…`, 23 `.py`). Suite: 6/6 → 9/9 PASS.
 - **Próximos passos usuais**: `git push` (só após F-CERT-01 resolvido, p/ o gate
   autorizar), reinstall do plugin p/ ativar o adapter novo, merge p/ `dev`.
 
+## Adendo F4.2 — Conselho + mudança de contrato ask→block
+
+- **Banca** (`/tmp/conselho-f42/out/`, trio agy+claude+muse sobre pack de 1104
+  linhas): **HOMOLOGADO COM RESSALVAS** — agy HOMOLOGADO 0.98 (reafirmou
+  F-CERT-01/F-CACHE-01), claude RESSALVAS 0.85 (sondas próprias no HEAD e no
+  clone RED; 7 riscos), muse TIMEOUT.
+- **Correções aplicadas** (commit F4.2, pós-banca): (1) legado fail-closed p/
+  `tool_input`/`command`/`path` com tipo errado + D11/D12 (bug real: era
+  `{}`+ALLOW, agora block); (2) D13 `submit_reminder_decision`→`{}` e D14
+  `edit_file`→G9 (tráfego quente pinado); (3) `mktemp` nos err-files dos testes
+  (hermeticidade concorrente); (4) `[AVISO CEH: N trechos redigidos]` no topo
+  do contexto do conselho quando há substituição; (5) E19 reclassificada:
+  lado-hook OBSERVED (log), lado-runtime PARTIALLY_SUPPORTED (transcript).
+- **Mudança de contrato declarada**: `ask`→`block` mecânico em staging
+  (coerente com upstream E1b; o runtime não tem "perguntar"). Os 2 alertas do
+  protocolo passam a valer para ações fora do hook. Skill `clearer` atualizada.
+- Total real de asserts novos: 36 (D14 + R7 + K13 + smoke 2), não 30.
+
 ## Reprodução
 
 ```bash

@@ -33,12 +33,15 @@ k() {
   # shellcheck disable=SC2086
   mout="$(cd /tmp && env -i PATH="$PATH" python3 "$HOOK" --check "$cmd" $env_arg 2>&1)"
   mdec="$(echo "$mout" | grep -oE '"decision": "[a-z]+"' | head -1)"
+  local ferr1 ferr2
+  ferr1="$(mktemp)"; ferr2="$(mktemp)"
   # (b) adapter argv -> stderr
   local aout aerr
-  aout="$(cd /tmp && env -i PATH="$PATH" "${env_var[@]}" python3 "$HOOK" "$cmd" 2>/tmp/kf-err.txt)"; aerr="$(cat /tmp/kf-err.txt)"
+  aout="$(cd /tmp && env -i PATH="$PATH" "${env_var[@]}" python3 "$HOOK" "$cmd" 2>"$ferr1")"; aerr="$(cat "$ferr1")"
   # (c) adapter nativo stdin -> stdout
   local pout perr
-  pout="$(mkpayload "$cmd" | (cd /tmp && env -i PATH="$PATH" "${env_var[@]}" python3 "$HOOK" 2>/tmp/kf-err2.txt))"; perr="$(cat /tmp/kf-err2.txt)"
+  pout="$(mkpayload "$cmd" | (cd /tmp && env -i PATH="$PATH" "${env_var[@]}" python3 "$HOOK" 2>"$ferr2"))"; perr="$(cat "$ferr2")"
+  rm -f "$ferr1" "$ferr2"
   local want_err want_json ok=1
   case "$want" in
     allow) want_err="CEH-SAFETY ALLOW"; want_json="{}" ;;
