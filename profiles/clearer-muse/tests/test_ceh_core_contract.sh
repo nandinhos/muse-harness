@@ -110,7 +110,7 @@ VENDOR_DIR="$ROOT/profiles/clearer-muse/hooks/vendor/ceh"
 C13SHA="$(cd "$VENDOR_DIR" && find . -type f -name '*.py' | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1)"
 C13N="$(cd "$VENDOR_DIR" && find . -type f -name '*.py' | wc -l)"
 C13PIN="$(grep -oE '^[|] sha256 do bundle.*`[0-9a-f]{64}`' "$VENDOR_DIR/VENDOR.md" | grep -oE '[0-9a-f]{64}' | head -n 1)"
-if [[ "$C13N" -eq 13 && -n "$C13PIN" && "$C13SHA" == "$C13PIN" ]]; then ok "C13-vendor-bundle-sha";
+if [[ "$C13N" -eq 23 && -n "$C13PIN" && "$C13SHA" == "$C13PIN" ]]; then ok "C13-vendor-bundle-sha";
 else bad "C13-vendor-bundle-sha" "n=$C13N sha=$C13SHA pin=$C13PIN"; fi
 
 echo "---"
