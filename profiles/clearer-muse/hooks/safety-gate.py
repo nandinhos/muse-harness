@@ -127,7 +127,53 @@ def _inside_plugin(path: Path) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _handle_unknown_tool(payload: dict[str, Any], tool: str) -> int:
+    """Despacho por forma (delta local D4): o runtime roteia TODAS as ferramentas
+    pelo PreToolUse (E19 + pós-restart: read_file/read_skill também disparam).
+    Bloquear ferramenta desconhecida quebra o harness (regressão v0.9.0), então:
+    - com `command` string → avaliada como terminal (fail-closed, fecha bypass
+      via ferramentas de execução futuras e cobre `monitor.command`);
+    - com `command`/`path` presente e mal-tipado → malformado (fail-closed);
+    - com alvo em `.ceh/` → block G9 (impossível distinguir leitura/escrita;
+      leitura de certs continua liberada via `cat` no bash, regra G9 de leitura);
+    - sem forma executável/arquivo (meta/leitura: read_skill, search, …) →
+      passthrough ALLOW auditado.
+    """
+    ti_raw = payload.get("tool_input")
+    if ti_raw is not None and not isinstance(ti_raw, dict):
+        return _emit("deny", "production", "tool_input não-objeto (fail-closed)")
+    ti = ti_raw if isinstance(ti_raw, dict) else {}
+    cmd = ti.get("command")
+    if cmd is not None and not isinstance(cmd, str):
+        return _emit("deny", "production", "tool_input.command não-string (fail-closed)")
+    path = ti.get("path") or ti.get("file_path") or payload.get("path") or payload.get("file_path")
+    if path is not None and not isinstance(path, str):
+        return _emit("deny", "production", "alvo de arquivo não-string (fail-closed)")
+    try:
+        eval_cwd, explicit_env, force_deny_push = _MUSE.resolve_target(payload)
+    except ValueError as exc:
+        return _emit("deny", "production", f"alvo inválido (fail-closed): {exc}")
+    if isinstance(cmd, str) and cmd.strip():
+        cwd = eval_cwd if eval_cwd is not None else Path.cwd()
+        return _legacy_terminal(cmd, explicit_env, cwd, force_deny_push)
+    if isinstance(path, str) and path.strip():
+        cwd = eval_cwd if eval_cwd is not None else Path.cwd()
+        env, _ev = _detect_env(explicit_env, "", cwd)
+        if is_protected_target(path.strip(), cwd):
+            return _emit(
+                "deny", env,
+                f"[CEH CERTIFICATE INTEGRITY - G9] Ferramenta '{tool}' tocando "
+                f".ceh/ ({path.strip()}) sem semântica conhecida (fail-closed).",
+            )
+        return _emit("allow", env, f"ferramenta não-coberta '{tool}' fora de .ceh/ (passthrough auditado)")
+    env, ev = _detect_env(explicit_env, "", eval_cwd if eval_cwd is not None else Path.cwd())
+    return _emit("allow", env, f"ferramenta não-coberta '{tool}' sem forma executável (passthrough auditado; {ev})")
+
+
 def _handle_native(payload: dict[str, Any]) -> int:
+    tool = str(payload.get("tool_name", "") or "").strip()
+    if tool and tool not in _MUSE.SUPPORTED_TOOLS:
+        return _handle_unknown_tool(payload, tool)
     try:
         req: Request = _MUSE.parse(payload)
     except ValueError as exc:

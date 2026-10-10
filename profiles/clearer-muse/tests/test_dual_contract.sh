@@ -63,7 +63,19 @@ STDIN_PAYLOAD='{"tool_name":"write_file","tool_input":{"path":"src/app.php"},"mo
 run "D6b-native-write-normal-allow" 0 '{}' 'CEH-SAFETY ALLOW' -- \
   env -i PATH="$PATH" python3 "$HOOK"
 STDIN_PAYLOAD='{"tool_name":"frobnicate","tool_input":{},"model_provider":"meta","turn_id":"t","cwd":"/tmp"}' \
-run "D7-native-unknowntool-block" 0 '"decision": "block"' 'CEH-SAFETY DENY' -- \
+run "D7-native-unknowntool-passthrough" 0 '{}' 'ferramenta não-coberta' -- \
+  env -i PATH="$PATH" python3 "$HOOK"
+STDIN_PAYLOAD='{"tool_name":"shell_exec","tool_input":{"command":"rm -rf /"},"model_provider":"meta","turn_id":"t","cwd":"/tmp"}' \
+run "D15-unknowntool-command-deny" 0 '"decision": "block"' 'CATASTROPHIC BLOCK' -- \
+  env -i PATH="$PATH" python3 "$HOOK"
+STDIN_PAYLOAD='{"tool_name":"read_skill","tool_input":{"name":"bundled:git"},"model_provider":"meta","turn_id":"t","cwd":"/tmp"}' \
+run "D16-readskill-allow" 0 '{}' 'ferramenta não-coberta' -- \
+  env -i PATH="$PATH" python3 "$HOOK"
+STDIN_PAYLOAD='{"tool_name":"read_file","tool_input":{"path":"src/app.php"},"model_provider":"meta","turn_id":"t","cwd":"'"$TMPD"'"}' \
+run "D17-readfile-outside-allow" 0 '{}' 'CEH-SAFETY ALLOW' -- \
+  env -i PATH="$PATH" python3 "$HOOK"
+STDIN_PAYLOAD='{"tool_name":"read_file","tool_input":{"path":".ceh/x"},"model_provider":"meta","turn_id":"t","cwd":"'"$TMPD"'"}' \
+run "D18-readfile-ceh-deny" 0 '"decision": "block"' 'G9' -- \
   env -i PATH="$PATH" python3 "$HOOK"
 
 # --- D8: legado {command} também é dual ---
