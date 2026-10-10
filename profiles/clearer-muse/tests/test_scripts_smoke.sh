@@ -75,8 +75,10 @@ fi
 # --- conselho --dry-run redige segredos do contexto (PR-21; stub hermético) ---
 TCB=$(mktemp -d); TCOUT=$(mktemp -d)
 printf '#!/usr/bin/env bash\necho STUB\n' > "$TCB/muse"; chmod +x "$TCB/muse"
+# Token sintético em partes p/ não tripar o scanner do evidence-report.
+FAKETOK='ghp_'"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdef"
 if PATH="$TCB:$PATH" bash "$SCR/conselho-seniores.sh" --dry-run --agent muse \
-    --prompt 'revisar token ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdef em /home/alice/proj' \
+    --prompt "revisar token $FAKETOK em /home/alice/proj" \
     --output-dir "$TCOUT" >/dev/null 2>&1 \
   && grep -q "REDACTED_GIT_TOKEN" "$TCOUT/prompt_muse.txt" \
   && ! grep -q "ghp_ABC" "$TCOUT/prompt_muse.txt" \

@@ -71,10 +71,12 @@ chk "R6-uppercase-find-deny" 2 '"decision": "deny"' 'CATASTROPHIC' -- \
   --check "FIND / -delete"
 
 # --- R7 (redact): segredos e homes redigidos antes de envio externo ---
+# Token sintético montado em partes p/ não tripar o scanner do evidence-report.
 R7OUT="$(cd /tmp && env -i PATH="$PATH" python3 -c "
 import sys; sys.path.insert(0, '$VENDOR')
 from ceh_core.redact import redact_payload
-print(redact_payload('key=ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdef dir=/home/alice/proj'))
+fake = 'ghp_' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdef'
+print(redact_payload('key=' + fake + ' dir=/home/alice/proj'))
 " 2>&1)"; R7RC=$?
 if [[ "$R7RC" -eq 0 && "$R7OUT" == *'REDACTED_GIT_TOKEN'* && "$R7OUT" != *'ghp_ABC'* && "$R7OUT" != *'/home/alice'* ]]; then ok "R7-redact-secrets";
 else bad "R7-redact-secrets" "rc=$R7RC out=[$R7OUT]"; fi
