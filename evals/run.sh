@@ -59,8 +59,15 @@ F4OUT="$(cd "$TMPDEV" && env -i PATH="$PATH" python3 "$HOOK" "git push --force" 
 if [[ "$F4OUT" == *"CEH-SAFETY ALLOW development"* && "$F4RC" -eq 0 ]]; then PASS=$((PASS+1)); echo "PASS F4-allow-push-force-dev";
 else FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST F4-allow-push-force-dev"; echo "FAIL F4-allow-push-force-dev :: out=[$F4OUT] rc=$F4RC"; fi
 rm -rf "$TMPDEV"
-gate "F4b-allow-benigno-dev" branch "git status" \
-  "CEH-SAFETY ALLOW development"
+# F4b (hermético): repo dev pinado em sandbox — nunca a branch ambiente do
+# checkout (em main, detect_environment eleva p/ production por desenho).
+TMPF4B=$(mktemp -d)
+git -C "$TMPF4B" init -q -b dev 2>/dev/null
+git -C "$TMPF4B" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init 2>/dev/null
+F4BOUT="$(cd "$TMPF4B" && env -u CEH_ENV -u APP_ENV -u NODE_ENV PATH="$PATH" python3 "$HOOK" "git status" 2>&1)"; F4BRC=$?
+if [[ "$F4BOUT" == *'CEH-SAFETY ALLOW development'* && "$F4BRC" -eq 0 ]]; then PASS=$((PASS+1)); echo "PASS F4b-allow-benigno-dev";
+else FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST F4b-allow-benigno-dev"; echo "FAIL F4b-allow-benigno-dev :: out=[$F4BOUT] rc=$F4BRC"; fi
+rm -rf "$TMPF4B"
 # F4c: push em dev COM CI mas sem certificado = DENY (PR-08/G7: todo push,
 # inclusive force, exige a suíte canônica verde. Fecha o furo do gate antigo,
 # que isentava force-push do CI gate e liberava em dev.)
@@ -76,9 +83,15 @@ rm -rf "$TMPF4C"
 # F5: sem comando identificável = fallback estruturado, exit 0
 gate "F5-fallback-sem-comando" prod "" \
   "CEH-SAFETY ALLOW production" "sem comando identificavel"
-# F6: staging = WARN com os 2 alertas (contrato ASK)
-gate "F6-warn-staging" staging "git push --force" \
-  "CEH-SAFETY WARN staging" "2 alertas"
+# F6: staging = WARN com os 2 alertas (contrato ASK). Sandbox dev pinado:
+# CEH_ENV=staging vence branch dev (severidade 1 > 0) em qualquer checkout.
+TMPF6=$(mktemp -d)
+git -C "$TMPF6" init -q -b dev 2>/dev/null
+git -C "$TMPF6" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init 2>/dev/null
+F6OUT="$(cd "$TMPF6" && env -i PATH="$PATH" CEH_ENV=staging python3 "$HOOK" "git push --force" 2>&1)"; F6RC=$?
+if [[ "$F6OUT" == *'CEH-SAFETY WARN staging'* && "$F6OUT" == *'2 alertas'* && "$F6RC" -eq 0 ]]; then PASS=$((PASS+1)); echo "PASS F6-warn-staging";
+else FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST F6-warn-staging"; echo "FAIL F6-warn-staging :: out=[$F6OUT] rc=$F6RC"; fi
+rm -rf "$TMPF6"
 # F7: canonical-diff.sh com destino inexistente = exit 2 (contrato de uso)
 if "$DIFFSH" /caminho/inexistente-xyz >/dev/null 2>&1; then
   FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST F7-diff-exit2"; echo "FAIL F7-diff-exit2 :: exit 0, esperado 2"

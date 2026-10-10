@@ -45,7 +45,7 @@ run "D1-argv-allow-dual" 0 '{}' 'CEH-SAFETY ALLOW development' -- \
 run "D2-argv-deny-dual" 0 '"decision": "block"' 'CEH-SAFETY DENY' -- \
   bash -c "cd \"$TMPD\" && env -u CEH_ENV -u APP_ENV -u NODE_ENV python3 \"$HOOK\" \"rm -rf /\""
 run "D3-argv-warn-dual" 0 '"decision": "block"' 'CEH-SAFETY WARN staging' -- \
-  env -i PATH="$PATH" CEH_ENV=staging python3 "$HOOK" "git reset --hard"
+  bash -c "cd \"$TMPD\" && env -i PATH=\"$PATH\" CEH_ENV=staging python3 \"$HOOK\" \"git reset --hard\""
 
 # --- D4/D5: payload nativo Muse via stdin (forma E19) ---
 STDIN_PAYLOAD='{"tool_name":"bash","tool_input":{"command":"rm -rf /","workdir":"/tmp"},"model_provider":"meta","turn_id":"t","cwd":"/tmp"}' \

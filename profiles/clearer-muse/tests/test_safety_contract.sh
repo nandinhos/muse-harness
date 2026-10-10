@@ -18,8 +18,8 @@ check() {
   local out rc ok=1
   case "$setup" in
     prod)    out="$(env -i PATH="$PATH" CEH_ENV=production python3 "$HOOK" "$cmd" 2>&1)"; rc=$? ;;
-    staging) out="$(env -i PATH="$PATH" CEH_ENV=staging python3 "$HOOK" "$cmd" 2>&1)"; rc=$? ;;
-    dev)     out="$(env -u CEH_ENV -u APP_ENV -u NODE_ENV PATH="$PATH" python3 "$HOOK" "$cmd" 2>&1)"; rc=$? ;;
+    staging) out="$(cd "$SANDBOX" && env -i PATH="$PATH" CEH_ENV=staging python3 "$HOOK" "$cmd" 2>&1)"; rc=$? ;;
+    dev)     out="$(cd "$SANDBOX" && env -u CEH_ENV -u APP_ENV -u NODE_ENV PATH="$PATH" python3 "$HOOK" "$cmd" 2>&1)"; rc=$? ;;
   esac
   for tok in "$@"; do
     [[ "$out" == *"$tok"* ]] || ok=0
@@ -30,6 +30,13 @@ check() {
 }
 
 [[ -f "$HOOK" ]] || { echo "INFRA-FAIL: hook ausente: $HOOK"; exit 1; }
+
+# Sandbox dev pinado: setups dev/staging nunca herdam a branch ambiente do
+# checkout (em main, detect_environment eleva p/ production por desenho).
+SANDBOX=$(mktemp -d)
+git -C "$SANDBOX" init -q -b dev 2>/dev/null
+git -C "$SANDBOX" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init 2>/dev/null
+trap 'rm -rf "$SANDBOX"' EXIT
 
 # --- DEV: liberdade com salvaguarda local ---
 check "dev-safe-status"            dev "git status"                "CEH-SAFETY ALLOW" "development"
