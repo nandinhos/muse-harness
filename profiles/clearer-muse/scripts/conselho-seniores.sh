@@ -24,6 +24,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || (cd "$SCRIPT_DIR/../.." && pwd))"
+VENDOR_DIR="$SCRIPT_DIR/../hooks/vendor/ceh"
 
 # Configurações padrão
 TIMEOUT_SECS=90
@@ -238,6 +239,15 @@ fi
 if [[ -z "$CONTEXT_PAYLOAD" ]]; then
   CONTEXT_PAYLOAD="Avaliar o estado atual da branch $(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'desconhecida') e o último commit $(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo 'desconhecido')."
 fi
+
+# Redação preventiva (PR-21 upstream, ponto único): nenhum segredo, token ou
+# caminho de home do contexto vaza para modelos externos nem para os artefatos
+# prompt_*.txt / contexto_avaliado.txt. Indisponível = fail-closed (nada envia).
+if ! python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import ceh_core.redact' "$VENDOR_DIR" 2>/dev/null; then
+  echo -e "${RED}Erro: redação de segredos indisponível (fail-closed): $VENDOR_DIR sem ceh_core.redact. Nada foi enviado.${RESET}" >&2
+  exit 1
+fi
+CONTEXT_PAYLOAD="$(printf '%s' "$CONTEXT_PAYLOAD" | python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); from ceh_core.redact import redact_payload; sys.stdout.write(redact_payload(sys.stdin.read()))' "$VENDOR_DIR")"
 
 get_agent_role() {
   local agent="$1"

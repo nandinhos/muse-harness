@@ -169,7 +169,7 @@ def main():
     abs_links_found = []
     for md_file in docs_dir.rglob("*.md"):
         content = md_file.read_text(encoding="utf-8")
-        matches = re.findall(r"(file:///home/[^\s\)\"'>]+|/home/\w+/projects/[^\s\)\"'>]+)", content)
+        matches = re.findall(r"(file:///home/[^\s\)\"'>]+|/(?:home|Users)/[\w.-]+/[^\s\)\"'>]*)", content)
         if matches:
             abs_links_found.append((md_file.relative_to(repo_root), matches))
 

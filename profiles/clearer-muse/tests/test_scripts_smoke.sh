@@ -72,6 +72,38 @@ else
   bad "smoke-doc-audit-root" "raiz incorreta"
 fi
 
+# --- conselho --dry-run redige segredos do contexto (PR-21; stub hermético) ---
+TCB=$(mktemp -d); TCOUT=$(mktemp -d)
+printf '#!/usr/bin/env bash\necho STUB\n' > "$TCB/muse"; chmod +x "$TCB/muse"
+if PATH="$TCB:$PATH" bash "$SCR/conselho-seniores.sh" --dry-run --agent muse \
+    --prompt 'revisar token ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdef em /home/alice/proj' \
+    --output-dir "$TCOUT" >/dev/null 2>&1 \
+  && grep -q "REDACTED_GIT_TOKEN" "$TCOUT/prompt_muse.txt" \
+  && ! grep -q "ghp_ABC" "$TCOUT/prompt_muse.txt" \
+  && ! grep -q "/home/alice" "$TCOUT/prompt_muse.txt" \
+  && ! grep -q "ghp_ABC" "$TCOUT/contexto_avaliado.txt"; then
+  ok "smoke-conselho-redact"
+else
+  bad "smoke-conselho-redact" "prompt/contexto com segredo não redigido"
+fi
+rm -rf "$TCB" "$TCOUT"
+
+# --- doc-audit [4/7]: regex de home abrange /home e /Users (escopo upstream) ---
+DARX='(file:///home/[^\s\)\"'"'"'>]+|/(?:home|Users)/[\w.-]+/[^\s\)\"'"'"'>]*)'
+if python3 -c "
+import re, sys
+rx = re.compile(sys.argv[1])
+must = ['x /home/alice/proj/a.md y', 'x /Users/bob/f.md y', 'x file:///home/c/d.md y']
+mustnt = ['x ~/proj/a.md y', 'x docs/a.md y', 'x /var/lib/z y']
+assert all(rx.search(s) for s in must), 'falha em positivo'
+assert not any(rx.search(s) for s in mustnt), 'falso positivo'
+" "$DARX"; then
+  if grep -qF '/(?:home|Users)/' "$SCR/doc-audit.py"; then ok "smoke-docaudit-home-regex";
+  else bad "smoke-docaudit-home-regex" "doc-audit.py sem classe /(home|Users)/"; fi
+else
+  bad "smoke-docaudit-home-regex" "amostras do regex falharam"
+fi
+
 echo "---"
 echo "SCRIPTS-SMOKE: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
 [[ "$FAIL" -eq 0 ]]
