@@ -48,6 +48,10 @@ de resposta com evidências e economia de tokens — instalável em qualquer pro
 | Addon `code-minimalism` (ordem nativo→mínimo, marcação `ponytail:`) | opt-in |
 | Addon `debugging` (5 gates bloqueantes, relatório lesson-ready) | opt-in |
 | Hook `safety-gate` (`PreToolUse`, veredito vinculante) | ativo |
+| Motor CEH v2.1.2 vendorizado (`hooks/vendor/ceh/`, sha em `VENDOR.md`) | ativo |
+| 15 skills (incl. `clearer-bugfix`, `conselho-seniores` opt-in) | ativo |
+| Suíte do profile 9/9 + smoke-eval 16/16 (`tests/run-all-tests.sh`) | ativo |
+| Profile pessoal `muse-ceh` v0.2.1 (dispatcher, sem hook próprio) | ativo |
 | Trava Pre-Push CI Gate (tolerância zero + Certificado de Voo) | ativo |
 | Runtime & CI Strategy Awareness (`RUNTIME_MODE` + `ci-cmd`) | ativo |
 | Invariantes System One (7, em `clearer-review`/`clearer-audit`) | ativo |
@@ -59,38 +63,49 @@ de resposta com evidências e economia de tokens — instalável em qualquer pro
 
 ```text
 profiles/clearer-muse/        # cópia canônica: skills, commands, hooks, scripts, manifest
-  skills/{clearer,clearer-feature,clearer-refactor,clearer-review,clearer-test,
-    clearer-audit,clearer-map,clearer-rules,clearer-adhd,token-economy,
-    code-minimalism,debugging,learned-lesson}/
-  commands/{clearer.md,token-report.md}  hooks/safety-gate.py
-  scripts/{token-budget.py,compress-output.sh,canonical-diff.sh,
-    detect-project.sh,test-runner.sh,diff-audit.sh,heartbeat.sh}
+  skills/{clearer,clearer-feature,clearer-bugfix,clearer-refactor,clearer-review,
+    clearer-test,clearer-audit,clearer-map,clearer-rules,clearer-adhd,token-economy,
+    code-minimalism,debugging,conselho-seniores,learned-lesson}/   # 15 skills
+  commands/{clearer.md,token-report.md}
+  hooks/{safety-gate.py (adapter fino),vendor/ceh/ (motor CEH v2.1.2)}
+  scripts/{canonical-diff.sh,ceh-help.sh,compress-output.sh,conselho-seniores.sh,
+    detect-project.sh,diff-audit.sh,doc-audit.py,doc-audit.sh,evidence-report.sh,
+    evidence_report.py,heartbeat.sh,preflight.sh,setup-branches.sh,task-monitor.sh,
+    test-runner.sh,token-budget.py}                                 # 16 arquivos
+  tests/{run-all-tests.sh + 8 suítes de contrato/regressão}
+profiles/muse-ceh/              # dispatcher pessoal v0.2.1 (skill + comando + teste, sem hook)
 docs/CREATE-PROFILE.md        # guia: criar um profile harness do zero
 templates/mcp.json            # base MCP (só `${VAR}`, sem segredos)
 adr/001…005                   # decisões: Context7, lições, minimalismo, hook órfão, governança CEH
-evals/                        # smoke-eval do safety-gate (15 asserts, CRITERIA.md pré-registrado)
+evals/                        # smoke-eval do safety-gate (16 asserts, CRITERIA.md pré-registrado)
 img/CLEARER-MUSE.jpg          # filosofia em uma imagem
-HANDOFF.md                    # estado verificado + ativação em 6 passos
+HANDOFF.md                    # handoff canônico (os HANDOFF-*.md são registros históricos)
+install.sh / uninstall.sh     # instalação local ou remota (clone da branch dev)
+LICENSE                       # MIT
 ```
 
 ### Rigor por ambiente
 
 | Branch | Ambiente | Rigor |
 |--------|----------|-------|
-| `dev` | desenvolvimento | `ALLOW` (destrutivos p/ correção, com rollback) |
-| `homologacao` | staging | `ASK` (blast radius + backup verificados) |
+| `dev*` | desenvolvimento | `ALLOW` (destrutivos p/ correção, com rollback) |
+| `staging`/`homolog*` | homologação | `ASK` (blast radius + backup verificados) |
 | `main` | produção | `DENY` (wipe, `reset --hard`, `push --force`, `rm -rf`…) |
 
-Fluxo de promoção: `dev` → `homologacao` → `main`, sempre fast-forward, sem force.
+Fluxo de promoção deste repo: `dev` → `main` (clássico), sempre fast-forward, sem
+force; `scripts/setup-branches.sh` também cria a topologia enterprise
+`dev` → `staging` → `main` em outros projetos.
 
 ### Início rápido
 
 ```bash
 # 1. Sanidade
 python3 -c "import json; json.load(open('profiles/clearer-muse/.muse-plugin/plugin.json'))"
-# 2. Aponte a fonte instalada para profiles/clearer-muse e reinicie a sessão
-muse plugins update clearer-muse   # após cada bump (exige restart: ADR-004)
-# 3. Anti-deriva
+# 2. Instale (local) ou aponte a fonte instalada p/ profiles/clearer-muse e reinicie
+./install.sh --scope user          # ou: muse plugins update clearer-muse (restart: ADR-004)
+# 3. Suíte completa do profile (esperado: 9/9 PASS, exit 0)
+bash profiles/clearer-muse/tests/run-all-tests.sh
+# 4. Anti-deriva
 profiles/clearer-muse/scripts/canonical-diff.sh [<destino>]
 ```
 
@@ -134,6 +149,10 @@ evidence-backed response contract, and token economy — installable in any proj
 | `code-minimalism` addon (native→minimal order, `ponytail:` marks) | opt-in |
 | `debugging` addon (5 blocking gates, lesson-ready report) | opt-in |
 | `safety-gate` hook (`PreToolUse`, binding verdict) | enabled |
+| Vendored CEH v2.1.2 engine (`hooks/vendor/ceh/`, sha in `VENDOR.md`) | enabled |
+| 15 skills (incl. opt-in `clearer-bugfix`, `conselho-seniores`) | enabled |
+| Profile suite 9/9 + smoke-eval 16/16 (`tests/run-all-tests.sh`) | enabled |
+| Personal `muse-ceh` v0.2.1 profile (dispatcher, no own hook) | enabled |
 | Pre-Push CI Gate (zero tolerance + Flight Certificate) | enabled |
 | Runtime & CI Strategy Awareness (`RUNTIME_MODE` + `ci-cmd`) | enabled |
 | System One invariants (7, in `clearer-review`/`clearer-audit`) | enabled |
@@ -143,27 +162,33 @@ evidence-backed response contract, and token economy — installable in any proj
 
 ### Layout
 
-Same tree as above: `profiles/clearer-muse/` (canonical source), `docs/`,
-`templates/mcp.json`, `adr/001–005`, `evals/`, `img/CLEARER-MUSE.jpg`, `HANDOFF.md`.
+Same tree as above: `profiles/clearer-muse/` (canonical source, 15 skills,
+16 script files, 9-suite `tests/`), `profiles/muse-ceh/` (personal dispatcher
+v0.2.1), `docs/`, `templates/mcp.json`, `adr/001–005`, `evals/` (16 asserts),
+`img/CLEARER-MUSE.jpg`, `HANDOFF.md`, `install.sh`, `LICENSE` (MIT).
 
 ### Rigor per environment
 
 | Branch | Environment | Rigor |
 |--------|-------------|-------|
-| `dev` | development | `ALLOW` (destructive ops for fixes, with rollback) |
-| `homologacao` | staging | `ASK` (blast radius + verified backup) |
+| `dev*` | development | `ALLOW` (destructive ops for fixes, with rollback) |
+| `staging`/`homolog*` | staging | `ASK` (blast radius + verified backup) |
 | `main` | production | `DENY` (wipes, `reset --hard`, `push --force`, `rm -rf`…) |
 
-Promotion flow: `dev` → `homologacao` → `main`, always fast-forward, never force.
+Promotion flow in this repo: `dev` → `main` (classic), always fast-forward,
+never force; `scripts/setup-branches.sh` also creates the enterprise
+`dev` → `staging` → `main` topology for other projects.
 
 ### Quickstart
 
 ```bash
 # 1. Sanity
 python3 -c "import json; json.load(open('profiles/clearer-muse/.muse-plugin/plugin.json'))"
-# 2. Point the installed source at profiles/clearer-muse and restart the session
-muse plugins update clearer-muse   # after each bump (restart required: ADR-004)
-# 3. Anti-drift
+# 2. Install locally or point the installed source at profiles/clearer-muse, then restart
+./install.sh --scope user          # or: muse plugins update clearer-muse (restart: ADR-004)
+# 3. Full profile suite (expected: 9/9 PASS, exit 0)
+bash profiles/clearer-muse/tests/run-all-tests.sh
+# 4. Anti-drift
 profiles/clearer-muse/scripts/canonical-diff.sh [<target>]
 ```
 
@@ -174,8 +199,9 @@ Details: [guide](docs/CREATE-PROFILE.md) · [handoff](HANDOFF.md).
 - Assumes Muse Code loads plugins from the registered source at boot
   (observed via `installed.json`); `npx -y @upstash/context7-mcp` is taken as
   the official Context7 server distribution.
-- Missing: official CLI command for local plugin (re)install (we observe state,
-  not the installer); exact anonymous Context7 quota — assumed limited.
+- Local plugin (re)install uses the official `muse plugins install|update`
+  CLI (wrapped by `install.sh`, observed working); the exact anonymous
+  Context7 quota remains unknown — assumed limited.
 
 ---
 
