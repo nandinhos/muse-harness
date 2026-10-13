@@ -62,7 +62,7 @@ Gestão por exceção: só transfira ao humano (handoff) diante de (1) ambiguida
 | Lição / memória técnica | `learned-lesson` (título≤80 + 4 seções) |
 | Hiperfoco / resposta direta (opt-in) | `clearer-adhd` |
 | Banca multi-modelo 360º (opt-in) | `conselho-seniores` (`scripts/conselho-seniores.sh`) |
-| Auditoria estrutural de docs | `doc-audit` (`scripts/doc-audit.sh`, layout CEH) |
+| Auditoria estrutural de docs | `doc-audit` (`scripts/doc-audit.sh`, layouts CEH e Muse) |
 | Economia de tokens (opt-in) | `token-economy` + `code-minimalism` |
 
 ## 6. Compatibilidade DEVORQ deste repo

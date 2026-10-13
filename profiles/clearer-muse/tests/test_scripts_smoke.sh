@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # test_scripts_smoke.sh — Smoke dos scripts portados do CEH (Fase 3).
 # Garante que cada script executa com exit esperado sem efeitos no repo:
-# topologias de branch rodam em sandbox /tmp; doc-audit deve falhar fechado
-# (exit != 0) sem plano CEH; conselho roda só --list-available/--dry-run.
+# topologias de branch rodam em sandbox /tmp; doc-audit detecta o layout
+# (CEH com plano, Muse sem) e falha fechado (exit 2) sem nenhum dos dois;
+# conselho roda só --list-available/--dry-run.
 # Uso: bash profiles/clearer-muse/tests/test_scripts_smoke.sh (cwd: raiz do repo; offline)
 set -u
 
@@ -58,12 +59,22 @@ for mode in --enterprise --classic; do
   rm -rf "$TMP"
 done
 
-# --- doc-audit: fail-closed sem plano CEH (exit != 0 é o PASS aqui) ---
-if bash "$SCR/doc-audit.sh" >/dev/null 2>&1; then
-  bad "smoke-doc-audit-failclosed" "saiu 0 sem plano (falso-verde)"
+# --- doc-audit: layout Muse verde neste repo (auditável de verdade) ---
+run_ok "smoke-doc-audit-muse" bash "$SCR/doc-audit.sh"
+
+# --- doc-audit: sandbox com link quebrado + caminho vazado = exit 1 ---
+DAT="$(mktemp -d)"
+printf '# X\n[quebrado](falta.md) e /home/alice/segredo\n' > "$DAT/README.md"
+if python3 "$SCR/doc-audit.py" "$DAT" >/dev/null 2>&1; then
+  bad "smoke-doc-audit-red" "saiu 0 com link quebrado e vazamento (falso-verde)"
 else
-  ok "smoke-doc-audit-failclosed"
+  ok "smoke-doc-audit-red"
 fi
+# --- doc-audit: diretório sem layout algum = exit 2 (fail-closed) ---
+DAV="$(mktemp -d)"
+python3 "$SCR/doc-audit.py" "$DAV" >/dev/null 2>&1; DAVRC=$?
+if [[ "$DAVRC" -eq 2 ]]; then ok "smoke-doc-audit-failclosed"; else bad "smoke-doc-audit-failclosed" "rc=$DAVRC (esperado 2)"; fi
+rm -rf "$DAT" "$DAV"
 
 # --- doc-audit resolve a raiz do repo (não profiles/) ---
 if bash "$SCR/doc-audit.sh" 2>&1 | grep -q "Repositório: $ROOT$"; then

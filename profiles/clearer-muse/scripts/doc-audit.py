@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 """
 CLEARER Engineering Harness (CEH) — Document Structure Audit Tool
+
+Dois layouts, mesma intenção (checks delimitados e determinísticos, fail-closed):
+- Layout CEH (Antigravity): quando existe docs/plano-validacao-*.md, rodam as
+  7 checagens originais abaixo, sem alteração de semântica.
+- Layout Muse: sem o plano, rodam 5 checagens espelhadas — links locais
+  resolvem, zero caminho absoluto vazado nos docs vivos, commits citados
+  existem, README sincronizado com os manifestos e orçamento de linhas.
+Sem nenhum dos dois layouts: exit 2 (nunca verde silencioso).
+Uso: doc-audit.py [raiz-do-repo]  (default: git rev-parse --show-toplevel)
+
 Verifica deterministicamente propriedades estruturais delimitadas da documentação:
 1. Conformidade de estados normativos em docs/plano-validacao-revisao-conselho-seniors.md
 2. Estados normativos, cabeçalhos da tabela R1 a R10 e contagem publicada da suíte geral
@@ -14,29 +24,21 @@ Não avalia coerência semântica integral, validade do conteúdo das evidência
 """
 import sys
 import re
+import json
 import subprocess
 from pathlib import Path
 
-def main():
-    # Layout Muse: profiles/clearer-muse/scripts/doc-audit.py -> raiz = parents[3]
-    # (na origem Antigravity era clearer-engineering/scripts/ -> parents[2]).
-    repo_root = Path(__file__).resolve().parents[3]
+def audit_ceh(repo_root):
+    """Layout CEH/Antigravity: 7 checagens originais, semântica inalterada."""
     docs_dir = repo_root / "docs"
     plano_file = docs_dir / "plano-validacao-revisao-conselho-seniors.md"
     handoffs_dir = docs_dir / "temp_implementation" / "handoffs"
     evidence_dir = docs_dir / "temp_implementation" / "evidence"
 
-    print("=== [CEH Bounded Document Structure Audit] ===")
-    print(f"Repositório: {repo_root}")
     print(f"Alvo principal: {plano_file.relative_to(repo_root)}")
-    print("-" * 50)
 
     errors = []
     checks_passed = 0
-
-    if not plano_file.exists():
-        print(f"ERRO FATAL: Plano não encontrado: {plano_file}")
-        sys.exit(1)
 
     plano_text = plano_file.read_text(encoding="utf-8")
 
@@ -251,11 +253,159 @@ def main():
         for idx, err in enumerate(errors, 1):
             print(f"  [{idx}] {err}")
         print("Auditoria documental REJEITADA.")
-        sys.exit(1)
+        return 1
     else:
         print(f"SUCESSO: {checks_passed}/7 checagens estruturais documentais passaram.")
         print("Auditoria estrutural documental APROVADA; coerência semântica integral não avaliada.")
-        sys.exit(0)
+        return 0
+
+HOME_RX = r"(file:///home/[^\s\)\"'>]+|/(?:home|Users)/[\w.-]+/[^\s\)\"'>]*)"
+LINK_RX = re.compile(r"\]\((?!https?://|#|mailto:)([^)\s]+)\)|src=\"(?!https?://)([^\"]+)\"")
+
+
+def _read(path):
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def audit_muse(repo_root):
+    """Layout Muse: 5 checagens delimitadas espelhando a intenção CEH.
+
+    Docs vivos (erro): README.md, HANDOFF.md, docs/CREATE-PROFILE.md,
+    docs/EVALS.md, adr/*.md, evals/*.md. Registros datados (demais .md em
+    docs/ e na raiz) têm só os links verificados — caminho absoluto em
+    prosa histórica é proveniência, reportado como INFO, nunca reescrito.
+    """
+    live = [p for p in (repo_root / "README.md", repo_root / "HANDOFF.md",
+                        repo_root / "docs/CREATE-PROFILE.md", repo_root / "docs/EVALS.md")
+            if p.exists()]
+    for sub in ("adr", "evals"):
+        live += sorted((repo_root / sub).rglob("*.md")) if (repo_root / sub).exists() else []
+    records = [p for p in sorted(repo_root.rglob("*.md"))
+               if p not in live and ".git" not in p.parts and "vendor" not in p.parts
+               and p.parent in (repo_root, repo_root / "docs")]
+    errors, infos, passed = [], [], 0
+
+    print("[1/5] Links locais resolvem (docs vivos + registros)...")
+    broken = []
+    for md in live + records:
+        for m in LINK_RX.finditer(_read(md)):
+            target = (m.group(1) or m.group(2)).split("#")[0].split(":")[0]
+            if target and not (md.parent / target).exists() and not (repo_root / target).exists():
+                broken.append(f"{md.relative_to(repo_root)} -> {target}")
+    if broken:
+        errors += [f"Link local quebrado: {b}" for b in broken]
+    else:
+        print(f"  • Links locais íntegros em {len(live) + len(records)} arquivos.")
+        passed += 1
+
+    print("[2/5] Zero caminho absoluto local nos docs vivos...")
+    for md in live:
+        found = re.findall(HOME_RX, _read(md))
+        if found:
+            errors.append(f"Caminho absoluto vazado em {md.relative_to(repo_root)}: {found[:2]}")
+    for md in records:
+        if re.search(HOME_RX, _read(md)):
+            infos.append(f"registro histórico com caminho absoluto (proveniência): {md.relative_to(repo_root)}")
+    if not any(e.startswith("Caminho absoluto") for e in errors):
+        print("  • Docs vivos portáveis.")
+        passed += 1
+
+    print("[3/5] Commits citados existem no Git local...")
+    shallow = subprocess.run(["git", "rev-parse", "--is-shallow-repository"],
+                             cwd=repo_root, capture_output=True, text=True).stdout.strip() == "true"
+    if shallow:
+        print("  • Clone raso (CI); commits ancestrais ignorados com segurança.")
+        passed += 1
+    else:
+        refs = set()
+        for md in live:
+            refs.update(re.findall(r"(?:commit|HEAD)\s+[`']?([0-9a-f]{7,40})[`']?", _read(md)))
+        missing = [c for c in refs if subprocess.run(
+            ["git", "rev-parse", "--verify", f"{c}^{{commit}}"],
+            cwd=repo_root, capture_output=True).returncode != 0]
+        if missing:
+            errors += [f"Commit citado inexistente no histórico local: {c}" for c in missing]
+        else:
+            print(f"  • {len(refs)} commit(s) citado(s) confirmado(s).")
+            passed += 1
+
+    print("[4/5] README sincronizado com os manifestos de profile...")
+    readme = _read(repo_root / "README.md") if (repo_root / "README.md").exists() else ""
+    drift = []
+    for manifest in sorted(repo_root.glob("profiles/*/.muse-plugin/plugin.json")):
+        data = json.loads(_read(manifest))
+        profile = manifest.parents[1]
+        if f"v{data['version']}" not in readme:
+            drift.append(f"{data['name']}: versão v{data['version']} não citada no README")
+        for skill in data.get("capabilities", {}).get("skills", []):
+            if skill["id"] not in readme:
+                drift.append(f"{data['name']}: skill '{skill['id']}' não citada no README")
+        scripts_dir = profile / "scripts"
+        if scripts_dir.exists():
+            for script in sorted(scripts_dir.iterdir()):
+                if script.is_file() and script.name not in readme:
+                    drift.append(f"{data['name']}: script '{script.name}' não citado no README")
+    if drift:
+        errors += drift
+    else:
+        print("  • Versões, skills e scripts dos manifestos citados no README.")
+        passed += 1
+
+    print("[5/5] Orçamento de linhas dos componentes core...")
+    over = []
+    for rel, cap in (("profiles/clearer-muse/hooks/safety-gate.py", 650),
+                     ("profiles/clearer-muse/scripts/test-runner.sh", 200)):
+        f = repo_root / rel
+        if f.exists():
+            n = len(_read(f).splitlines())
+            print(f"  • {Path(rel).name}: {n} linhas (teto {cap})")
+            if n > cap:
+                over.append(f"{rel} excedeu o orçamento: {n} > {cap}")
+    errors += over
+    if not over:
+        passed += 1
+
+    for info in infos:
+        print(f"INFO: {info}")
+    print("-" * 50)
+    if errors:
+        print(f"FALHA: {len(errors)} inconsistência(s) encontrada(s):")
+        for idx, err in enumerate(errors, 1):
+            print(f"  [{idx}] {err}")
+        print("Auditoria documental REJEITADA.")
+        return 1
+    print(f"SUCESSO: {passed}/5 checagens estruturais documentais passaram.")
+    print("Auditoria estrutural documental APROVADA; coerência semântica integral não avaliada.")
+    return 0
+
+
+def _repo_root(argv):
+    if len(argv) > 1:
+        return Path(argv[1]).resolve()
+    top = subprocess.run(["git", "rev-parse", "--show-toplevel"],
+                         capture_output=True, text=True)
+    if top.returncode == 0 and top.stdout.strip():
+        return Path(top.stdout.strip())
+    return Path(__file__).resolve().parents[3]
+
+
+def main():
+    repo_root = _repo_root(sys.argv)
+    plano = repo_root / "docs/plano-validacao-revisao-conselho-seniors.md"
+    print("=== [CEH Bounded Document Structure Audit] ===")
+    print(f"Repositório: {repo_root}")
+    if plano.exists():
+        print("Layout detectado: CEH (Antigravity)")
+        print("-" * 50)
+        return audit_ceh(repo_root)
+    if (repo_root / "README.md").exists():
+        print("Layout detectado: Muse")
+        print("-" * 50)
+        return audit_muse(repo_root)
+    print("ERRO: nenhum layout reconhecido (sem plano CEH e sem README.md).")
+    print("Auditoria documental REJEITADA (fail-closed).")
+    return 2
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

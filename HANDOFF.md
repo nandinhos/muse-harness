@@ -124,5 +124,9 @@ Risk Dial, fail-closed, veredito calculado), em `dev`:
 - Adiado com gatilho (`ponytail:`): script de re-vendor (procedimento já
   está em `VENDOR.md`), lint novo e ampliação do lexer do safety-gate
   (segurança é exceção ao minimalismo).
+- `doc-audit.py` adaptado aos dois layouts: com o plano CEH roda as 7
+  checagens originais sem alteração; sem ele, 5 checagens Muse (links,
+  vazamentos, commits citados, README×manifestos, orçamento de linhas) e
+  exit 2 sem layout algum — verde neste repo, vermelho provado em sandbox.
 - Pendente: `muse plugins update muse-ceh` + restart no início da próxima
   sessão (ADR-004) e tarefa-canário do hook único.
