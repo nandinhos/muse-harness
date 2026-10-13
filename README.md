@@ -39,7 +39,7 @@ de resposta com evidências e economia de tokens — instalável em qualquer pro
 | 6 | Verificação independente | Testes do repo + `diff-audit` do próprio diff antes de entregar |
 | 7 | Melhoria contínua como rotina | Falhas viram gates permanentes (ADRs, hooks, regressões) |
 
-### O profile `clearer-muse` v0.5.0
+### O profile `clearer-muse` v0.9.0
 
 | Capacidade | Estado |
 |------------|--------|
@@ -125,7 +125,7 @@ evidence-backed response contract, and token economy — installable in any proj
 | 6 | Independent verification | Repo tests + self `diff-audit` before delivery |
 | 7 | Continuous improvement as routine | Failures become permanent gates (ADRs, hooks, regressions) |
 
-### The `clearer-muse` profile v0.5.0
+### The `clearer-muse` profile v0.9.0
 
 | Capability | Status |
 |------------|--------|

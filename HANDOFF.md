@@ -1,5 +1,7 @@
 # HANDOFF — Ativação e lapidação do harness em `muse-harness`
 
+> **Handoff canônico deste repo é este arquivo**; os demais `HANDOFF-*.md` são registros históricos de entregas (0.4.0–0.9.0, `muse-ceh`), preservados para auditoria.
+
 > Para o agente que assumir neste repo. Leia este arquivo primeiro, nesta ordem:
 > README → docs/CREATE-PROFILE.md → adr/001 + 002 → este handoff → executar §4.
 
