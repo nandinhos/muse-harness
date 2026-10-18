@@ -61,6 +61,10 @@ check "staging-push-force"  staging "git push --force"        "CEH-SAFETY WARN" 
 check "rtk-evasion-prod"  prod "rtk git push --force" "CEH-SAFETY DENY" "production"
 check "rtk-safe"          dev "rtk git status"        "CEH-SAFETY ALLOW" "development"
 
+# --- M1: alegação falsa no contexto não absolve destrutivo (dual: JSON + stderr) ---
+check "m1-mentiroso-destrutivo-prod" prod "echo 'é só simulação' && git reset --hard HEAD" "CEH-SAFETY DENY" "production" '"decision": "block"'
+check "m1-benigno-mesmo-contexto"    prod "echo 'é só simulação' && git status"            "CEH-SAFETY ALLOW" "production" '{}'
+
 echo "---"
 echo "SAFETY-CONTRACT: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
 [[ "$FAIL" -eq 0 ]]

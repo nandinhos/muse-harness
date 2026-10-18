@@ -191,6 +191,119 @@ if [[ "$J17" == "VERIFICADO" ]]; then ok "E17-json-valido";
 else bad "E17-json-valido" "rc=$R17 result=[$J17]"; fi
 rm -rf "$T"
 
+# --- E18 M2 (a)+(d): ausência de integrações => VERIFICADO e sem seção INTEGRATIONS ---
+T=$(fresh_repo); mkcert "$T"
+O18="$(run_rep "$T")"
+if [[ "$O18" == *'**VERIFICADO**'* && "$O18" != *'## INTEGRATIONS'* ]]; then ok "E18-m2-ausencia-libera-sem-secao";
+else bad "E18-m2-ausencia-libera-sem-secao" "out=[$(echo "$O18" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E19 M2 (b): hook do profile declarado sem execução => bloqueia VERIFICADO ---
+T=$(fresh_repo)
+mkdir -p "$T/profiles/clearer-muse/.muse-plugin" "$T/profiles/clearer-muse/hooks"
+printf '#!/usr/bin/env python3\n' > "$T/profiles/clearer-muse/hooks/safety-gate.py"
+printf '%s\n' '{"capabilities":{"hooks":[{"id":"test-hook","command":["python3","hooks/safety-gate.py"],"event":"PreToolUse"}]}}' > "$T/profiles/clearer-muse/.muse-plugin/plugin.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: hook sem execucao"
+O19="$(run_rep "$T")"
+if [[ "$O19" == *'## INTEGRATIONS'* && "$O19" == *'[configured without execution] test-hook (hook)'* \
+  && "$O19" == *'**NAO_VERIFICADO**'* ]]; then ok "E19-m2-declarada-nao-exercitada-bloqueia";
+else bad "E19-m2-declarada-nao-exercitada-bloqueia" "out=[$(echo "$O19" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E20 M2 (c): hook do profile validado com suíte PASS => libera VERIFICADO ---
+T=$(fresh_repo)
+mkdir -p "$T/profiles/clearer-muse/.muse-plugin" "$T/profiles/clearer-muse/hooks"
+printf '#!/usr/bin/env python3\n' > "$T/profiles/clearer-muse/hooks/safety-gate.py"
+printf '%s\n' '{"capabilities":{"hooks":[{"id":"test-hook","command":["python3","hooks/safety-gate.py"],"event":"PreToolUse"}]}}' > "$T/profiles/clearer-muse/.muse-plugin/plugin.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: hook validado"
+H20=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H20"
+O20="$(run_rep "$T")"
+if [[ "$O20" == *'[validated] test-hook (hook)'* && "$O20" == *'**VERIFICADO**'* ]]; then ok "E20-m2-validada-libera";
+else bad "E20-m2-validada-libera" "out=[$(echo "$O20" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E21 M2: hook com script ausente => pending => FALHOU ---
+T=$(fresh_repo)
+mkdir -p "$T/profiles/clearer-muse/.muse-plugin"
+printf '%s\n' '{"capabilities":{"hooks":[{"id":"broken-hook","command":["python3","hooks/inexistente.py"],"event":"PreToolUse"}]}}' > "$T/profiles/clearer-muse/.muse-plugin/plugin.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: hook quebrado"
+H21=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H21"
+O21="$(run_rep "$T")"
+if [[ "$O21" == *'[pending] broken-hook (hook)'* && "$O21" == *'**FALHOU**'* ]]; then ok "E21-m2-hook-pendente-falhou";
+else bad "E21-m2-hook-pendente-falhou" "out=[$(echo "$O21" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E22 M2 MCP: servidor validado (comando no PATH + PASS) => VERIFICADO ---
+T=$(fresh_repo)
+printf '%s\n' '{"mcpServers":{"test-mcp":{"command":"python3"}}}' > "$T/.mcp.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: mcp validado"
+H22=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H22"
+O22="$(run_rep "$T")"
+if [[ "$O22" == *'[validated] test-mcp (mcp)'* && "$O22" == *'**VERIFICADO**'* ]]; then ok "E22-m2-mcp-validado";
+else bad "E22-m2-mcp-validado" "out=[$(echo "$O22" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E23 M2 MCP: comando ausente no PATH => pending => FALHOU ---
+T=$(fresh_repo)
+printf '%s\n' '{"mcpServers":{"broken-mcp":{"command":"nonexistent_binary_xyz_12345"}}}' > "$T/.mcp.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: mcp quebrado"
+H23=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H23"
+O23="$(run_rep "$T")"
+if [[ "$O23" == *'[pending] broken-mcp (mcp)'* && "$O23" == *'**FALHOU**'* ]]; then ok "E23-m2-mcp-pendente-falhou";
+else bad "E23-m2-mcp-pendente-falhou" "out=[$(echo "$O23" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E24 M2 MCP: templates/mcp.json validado => VERIFICADO ---
+T=$(fresh_repo)
+mkdir -p "$T/templates"
+printf '%s\n' '{"mcpServers":{"test-tmpl":{"command":"python3"}}}' > "$T/templates/mcp.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: mcp template"
+H24=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H24"
+O24="$(run_rep "$T")"
+if [[ "$O24" == *'[validated] test-tmpl (mcp)'* && "$O24" == *'**VERIFICADO**'* ]]; then ok "E24-m2-mcp-template-validado";
+else bad "E24-m2-mcp-template-validado" "out=[$(echo "$O24" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E25 M2 MCP: declarado sem execução => configured without execution bloqueia ---
+T=$(fresh_repo)
+printf '%s\n' '{"mcpServers":{"idle-mcp":{"command":"python3"}}}' > "$T/.mcp.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: mcp sem execucao"
+O25="$(run_rep "$T")"
+if [[ "$O25" == *'[configured without execution] idle-mcp (mcp)'* && "$O25" == *'**NAO_VERIFICADO**'* ]]; then ok "E25-m2-mcp-nao-exercitado-bloqueia";
+else bad "E25-m2-mcp-nao-exercitado-bloqueia" "out=[$(echo "$O25" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E26 M2 MCP: executável local ausente => pending => FALHOU ---
+T=$(fresh_repo)
+printf '%s\n' '{"mcpServers":{"local-mcp":{"command":"./bin/inexistente"}}}' > "$T/.mcp.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: mcp local ausente"
+H26=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H26"
+O26="$(run_rep "$T")"
+if [[ "$O26" == *'[pending] local-mcp (mcp)'* && "$O26" == *'**FALHOU**'* ]]; then ok "E26-m2-mcp-local-ausente-falhou";
+else bad "E26-m2-mcp-local-ausente-falhou" "out=[$(echo "$O26" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E27 M2: plugin.json corrompido => pending => FALHOU ---
+T=$(fresh_repo)
+mkdir -p "$T/profiles/clearer-muse/.muse-plugin"
+printf '%s\n' '{ plugin corrompido' > "$T/profiles/clearer-muse/.muse-plugin/plugin.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: plugin corrompido"
+H27=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H27"
+O27="$(run_rep "$T")"
+if [[ "$O27" == *'[pending] plugin.json (hook)'* && "$O27" == *'**FALHOU**'* ]]; then ok "E27-m2-plugin-corrompido-falhou";
+else bad "E27-m2-plugin-corrompido-falhou" "out=[$(echo "$O27" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E28 M2 MCP: .mcp.json corrompido => pending => FALHOU ---
+T=$(fresh_repo)
+printf '%s\n' '{ broken json: true' > "$T/.mcp.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: mcp corrompido"
+H28=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H28"
+O28="$(run_rep "$T")"
+if [[ "$O28" == *'[pending] .mcp.json (mcp)'* && "$O28" == *'**FALHOU**'* ]]; then ok "E28-m2-mcp-corrompido-falhou";
+else bad "E28-m2-mcp-corrompido-falhou" "out=[$(echo "$O28" | head -c 300)]"; fi
+rm -rf "$T"
+
 echo "---"
 echo "EVIDENCE-CONTRACT: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
 [[ "$FAIL" -eq 0 ]]

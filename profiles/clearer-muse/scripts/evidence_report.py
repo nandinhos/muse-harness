@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # Porte de clearer-engineering/scripts/evidence_report.py (CEH v2.1.2, ref 76eaf76).
-# Delta único de host (1/1): detect_env() procura o safety-gate no layout do
-# profile Muse (../hooks/safety-gate.py) antes do layout upstream (irmão em
-# scripts/). Todo o resto é idêntico ao upstream — veredito calculado, nunca
-# declarado (Invariante 6: código detém o veredito).
+# Delta de host: detect_env() procura o safety-gate no layout do profile Muse
+# (../hooks/safety-gate.py) antes do layout upstream (irmão em scripts/).
+# Etapa 2/M2: inspect_integrations() portado do oficial 459d15a com fontes
+# adaptadas ao layout Muse (hooks do profile + .mcp.json/templates/mcp.json
+# do projeto alvo) — semântica de 3 estados idêntica. Veredito calculado,
+# nunca declarado (Invariante 6: código detém o veredito).
 """
 evidence_report.py - Relatório canônico de evidências do CEH (Response Contract).
 
@@ -30,6 +32,7 @@ import hashlib
 import importlib.util
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -120,6 +123,74 @@ def load_evals_certificate(head: str) -> dict:
     return {"state": state, "cert": ev, "detail": detail}
 
 
+def inspect_integrations(tests_state: str) -> list[dict]:
+    """Inspeciona integrações declaradas no projeto alvo (cwd = raiz git).
+
+    Fontes adaptadas ao layout Muse: hooks do profile
+    (`profiles/clearer-muse/.muse-plugin/plugin.json`) e servidores MCP
+    (`.mcp.json`, `templates/mcp.json`). Sem declarações, retorna `[]`
+    (degradação graciosa: seção omitida, sem penalidade). Vocabulário
+    fechado de 3 estados:
+      - 'validated': declarada e coberta por suíte PASS nesta sessão.
+      - 'configured without execution': declarada, não exercitada.
+      - 'pending': declarada, porém arquivo/executável quebrado/ausente.
+    """
+    integrations: list[dict] = []
+
+    plugin_file = Path("profiles/clearer-muse/.muse-plugin/plugin.json")
+    if plugin_file.is_file():
+        try:
+            data = json.loads(plugin_file.read_text(encoding="utf-8"))
+            hooks = data.get("capabilities", {}).get("hooks", []) if isinstance(data, dict) else []
+            if isinstance(hooks, list):
+                for hook_def in hooks:
+                    if not isinstance(hook_def, dict):
+                        continue
+                    name = str(hook_def.get("id") or "hook")
+                    cmd = hook_def.get("command")
+                    parts = [str(p) for p in cmd] if isinstance(cmd, list) else (cmd.split() if isinstance(cmd, str) else [])
+                    broken, broken_reason = False, ""
+                    for part in parts[1:]:
+                        if part.endswith((".py", ".sh", ".js")) and not Path(part).is_file() \
+                                and not (plugin_file.parent.parent / part).is_file():
+                            broken, broken_reason = True, f"script `{part}` não encontrado"
+                            break
+                    if broken:
+                        status, detail = "pending", f"`{name}` em `{plugin_file}`: {broken_reason}"
+                    elif tests_state == "PASS":
+                        status, detail = "validated", f"`{name}` em `{plugin_file}` verificado e ativo"
+                    else:
+                        status, detail = "configured without execution", f"`{name}` em `{plugin_file}` configurado sem execução de testes"
+                    integrations.append({"name": name, "type": "hook", "file": str(plugin_file), "status": status, "detail": detail})
+        except Exception:
+            integrations.append({"name": plugin_file.name, "type": "hook", "file": str(plugin_file), "status": "pending", "detail": f"arquivo `{plugin_file}` ilegível"})
+
+    for mcp_file in (Path(".mcp.json"), Path("templates/mcp.json")):
+        if not mcp_file.is_file():
+            continue
+        try:
+            data = json.loads(mcp_file.read_text(encoding="utf-8"))
+            servers = data.get("mcpServers") if isinstance(data, dict) else None
+            if isinstance(servers, dict):
+                for srv_name, srv_def in servers.items():
+                    cmd = srv_def.get("command") if isinstance(srv_def, dict) else None
+                    if not cmd:
+                        status, detail = "pending", f"servidor MCP `{srv_name}` sem comando declarado"
+                    elif cmd.startswith((".", "/")) and not Path(cmd).is_file():
+                        status, detail = "pending", f"servidor MCP `{srv_name}`: executável local `{cmd}` não encontrado"
+                    elif not cmd.startswith((".", "/")) and not shutil.which(cmd):
+                        status, detail = "pending", f"servidor MCP `{srv_name}`: comando `{cmd}` ausente no PATH"
+                    elif tests_state == "PASS":
+                        status, detail = "validated", f"servidor MCP `{srv_name}` configurado e acessível (`{cmd}`)"
+                    else:
+                        status, detail = "configured without execution", f"servidor MCP `{srv_name}` configurado sem teste de execução"
+                    integrations.append({"name": srv_name, "type": "mcp", "file": str(mcp_file), "status": status, "detail": detail})
+        except Exception:
+            integrations.append({"name": mcp_file.name, "type": "mcp", "file": str(mcp_file), "status": "pending", "detail": f"arquivo `{mcp_file}` ilegível"})
+
+    return integrations
+
+
 FORBIDDEN_EXEC_STATE_RE = re.compile(r"\b(su[íi]tes?|evals?|smoke)\b.*\b(pass(ed|a)?|aprovad[oa]s?|verde|\d+/\d+)\b", re.I)
 
 
@@ -168,6 +239,8 @@ def build(args) -> dict:
 
     tests = load_certificate(head)
     evals = load_evals_certificate(head)
+    integrations = inspect_integrations(tests["state"])
+    unvalidated_integs = [i for i in integrations if i["status"] != "validated"]
     claims = [{"text": t, "proof": p, **dict(zip(("status", "where"), verify_proof(p, head)))} for t, p in args.claim]
     criteria = [{"text": t, "proof": p, **dict(zip(("status", "where"), verify_proof(p, head)))} for t, p in args.criterion]
     findings = [{"severity": s.upper(), "text": t} for s, t in args.finding]
@@ -183,6 +256,11 @@ def build(args) -> dict:
         pending.append(f"Testes: {tests['state']} — {tests['detail']}.")
     if evals["state"] != "PASS":
         pending.append(f"Evals: {evals['state']} — {evals['detail']}.")
+    for i in unvalidated_integs:
+        if i["status"] == "pending":
+            pending.append(f"Integração com falha ({i['name']}): {i['detail']}.")
+        else:
+            pending.append(f"Integração não testada ({i['name']}): {i['detail']}.")
     for item in claims + criteria:
         if item["status"] != "SUPPORTED":
             pending.append(f"{item['status']}: \"{item['text']}\" ({item['where']}).")
@@ -190,24 +268,25 @@ def build(args) -> dict:
         pending.append(f"Diff com {secrets} padrão(ões) de segredo e {conflicts} marcador(es) de conflito.")
 
     # Veredito e confiança: regras fechadas, calculadas (nunca declaradas).
-    if tests["state"] == "FAIL" or evals["state"] == "FAIL" or counts["BLOCKER"] or secrets or conflicts:
+    if tests["state"] == "FAIL" or evals["state"] == "FAIL" or counts["BLOCKER"] or secrets or conflicts or any(i["status"] == "pending" for i in integrations):
         result = "FALHOU"
-    elif tests["state"] == "PASS" and evals["state"] == "PASS" and not dirty and all(i["status"] == "SUPPORTED" for i in claims + criteria):
+    elif tests["state"] == "PASS" and evals["state"] == "PASS" and not dirty and all(i["status"] == "SUPPORTED" for i in claims + criteria) and not unvalidated_integs:
         result = "VERIFICADO"
     else:
         result = "NAO_VERIFICADO"
     if result == "VERIFICADO" and claims + criteria:
-        confidence = ("ALTA", "1.0", "suíte e evals PASS no HEAD, worktree limpo e todas as afirmações com prova versionada")
+        confidence = ("ALTA", "1.0", "suíte e evals PASS no HEAD, worktree limpo, integrações validadas e todas as afirmações com prova versionada")
     elif result == "VERIFICADO":
-        confidence = ("MEDIA", "0.60", "suíte e evals PASS no HEAD, mas nenhuma afirmação ou critério foi amarrado a prova")
+        confidence = ("MEDIA", "0.60", "suíte e evals PASS no HEAD e integrações validadas, mas nenhuma afirmação ou critério foi amarrado a prova")
     elif result == "NAO_VERIFICADO" and tests["state"] == "PASS":
-        confidence = ("MEDIA", "0.60", "testes PASS no HEAD, mas há pendências de evals, prova ou alterações não cobertas")
+        confidence = ("MEDIA", "0.60", "testes PASS no HEAD, mas há pendências de evals, integrações, prova ou alterações não cobertas")
     else:
         confidence = ("BAIXA", "0.30", "sem evidência de testes/evals válida no HEAD ou com falha comprovada")
 
     return {"result": result, "branch": branch or "(detached)", "head": head, "base": base_desc,
             "environment": detect_env(), "commits": commits, "files": files, "shortstat": stat,
-            "dirty": dirty, "tests": tests, "evals": evals, "claims": claims, "criteria": criteria,
+            "dirty": dirty, "tests": tests, "evals": evals, "integrations": integrations,
+            "claims": claims, "criteria": criteria,
             "findings": findings, "finding_counts": counts, "secrets": secrets, "conflicts": conflicts,
             "risks": list(args.risk), "pending": pending,
             "confidence": {"level": confidence[0], "score": confidence[1], "rule": confidence[2]}}
@@ -239,6 +318,10 @@ def render(r: dict) -> str:
     out += [f"  > {ln}" for ln in t.get("log_tail", [])]
     if ev:
         out += [f"- Smoke-evals: **{ev.get('state', 'UNKNOWN')}** (`OBSERVED`) — {ev.get('detail', '')}"]
+    integs = r.get("integrations", [])
+    if integs:
+        out += ["", "## INTEGRATIONS", ""]
+        out += [f"- [{i['status']}] {i['name']} ({i['type']}) — {i['detail']}" for i in integs]
     c = r["finding_counts"]
     out += ["", "## REVIEW", "", f"- Achados declarados: BLOCKER {c['BLOCKER']} · HIGH {c['HIGH']} · MEDIUM {c['MEDIUM']} · "
             f"LOW {c['LOW']} · INFO {c['INFO']}"]
