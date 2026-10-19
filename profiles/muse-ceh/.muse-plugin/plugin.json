@@ -1,0 +1,19 @@
+{
+  "name": "muse-ceh",
+  "displayName": "Muse CEH Harness",
+  "description": "Perfil CLEARER personalizado (Fernando) para projetos PHP legado/MVC no Muse: ciclo CLEARER, Risk Dial e contrato de resposta com evidências. Dispatcher pessoal sem hook próprio desde 0.2.0 — o safety-gate é o motor CEH v2.1.2 do plugin clearer-muse 0.9.0 (hook único); sem dependência do runtime Antigravity.",
+  "version": "0.2.1",
+  "schemaVersion": 1,
+  "compat": { "manifestDir": ".muse-plugin", "source": "native" },
+  "capabilities": {
+    "skills": [
+      { "id": "muse-ceh", "path": "skills/muse-ceh/SKILL.md", "enabledDefault": true }
+    ],
+    "commands": [
+      { "id": "muse-ceh-run", "path": "commands/muse-ceh.md", "enabledDefault": true }
+    ],
+    "hooks": [],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

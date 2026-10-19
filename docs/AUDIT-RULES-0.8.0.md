@@ -1,7 +1,7 @@
 # AUDIT — rules/*.md upstream vs clearer-rules/SKILL.md (v0.8.0)
 
-> Backlog do [HANDOFF-EVIDENCE-0.8.0](/home/nandodev/projects/muse-harness/HANDOFF-EVIDENCE-0.8.0.md) §4, item 3.
-> Método: [clearer-audit](/home/nandodev/projects/muse-harness/profiles/clearer-muse/skills/clearer-audit/SKILL.md)
+> Backlog do [HANDOFF-EVIDENCE-0.8.0](../HANDOFF-EVIDENCE-0.8.0.md) §4, item 3.
+> Método: [clearer-audit](../profiles/clearer-muse/skills/clearer-audit/SKILL.md)
 > (claims atômicos, espaço fechado, decisão + certeza). Auditoria de **cobertura documental**: cada claim
 > pergunta se a cláusula upstream está **expressa em `clearer-rules/SKILL.md`**; a coluna "Profile" informa
 > cobertura cruzada em outra skill/script do profile (não conta p/ o veredito estrito).

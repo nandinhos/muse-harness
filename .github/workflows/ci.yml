@@ -2,9 +2,9 @@ name: CLEARER Muse Quality & Test Suite
 
 on:
   push:
-    branches: [main, staging, dev]
+    branches: [main, dev]
   pull_request:
-    branches: [main, staging, dev]
+    branches: [main, dev]
 
 jobs:
   validate:

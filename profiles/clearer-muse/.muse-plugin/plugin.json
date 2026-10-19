@@ -108,7 +108,7 @@
     "manifestDir": ".muse-plugin",
     "source": "native"
   },
-  "description": "Abstracao do CLEARER Engineering Harness para o Muse: ciclo CLEARER, Risk Dial, safety-gate por ambiente e addon de gestao de tokens, adaptados a este repositorio Laravel.",
+  "description": "Abstracao do CLEARER Engineering Harness para o Muse: ciclo CLEARER, Risk Dial, safety-gate por ambiente e addon de gestao de tokens, instalaveis em qualquer projeto.",
   "displayName": "CLEARER Muse Harness",
   "name": "clearer-muse",
   "schemaVersion": 1,
