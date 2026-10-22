@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# Porte de clearer-engineering/scripts/evidence_report.py (CEH v2.1.2, ref 76eaf76).
+# Porte de clearer-engineering/scripts/evidence_report.py (base CEH v2.1.2,
+# ref 76eaf76; fixes oficiais de 19/10 adaptados na Etapa 3/Fase 1).
 # Delta de host: detect_env() procura o safety-gate no layout do profile Muse
 # (../hooks/safety-gate.py) antes do layout upstream (irmão em scripts/).
 # Etapa 2/M2: inspect_integrations() portado do oficial 459d15a com fontes

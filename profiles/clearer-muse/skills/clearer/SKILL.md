@@ -6,8 +6,9 @@ description: Dispatcher do CLEARER Engineering Harness no Muse. Classifica ambie
 # Clearer Dispatcher (Muse)
 
 Ponto de entrada do **CLEARER Engineering Harness (CEH)** adaptado ao Muse.
-Portado de `antigravity-clearer-engineering-harness`: mesmo protocolo, sem
-dependência do runtime Antigravity (`agy`, `~/.gemini`, hooks proprietários).
+Portado de `antigravity-clearer-engineering-harness` (CEH **v2.1.3 + Ponytail v5**,
+motor vendored ref `550848a`): mesmo protocolo, sem dependência do runtime
+Antigravity (`agy`, `~/.gemini`, hooks proprietários).
 
 ## 1. Identificação de ambiente (obrigatória antes de mutar)
 
@@ -46,6 +47,8 @@ O plugin não declara `agents` (família não suportada no Muse): os papéis sã
 - `UNKNOWN`: sem evidência — reporte como tal, nunca alucine arquivo, classe, método ou regra.
 
 Gestão por exceção: só transfira ao humano (handoff) diante de (1) ambiguidade real, (2) `WARN`/`DENY` do safety-gate, (3) teste falhando após 1 auto-reparo fundamentado, ou (4) risco `HIGH`.
+
+Visibilidade (Heurística 12, anti-silent-loop): em cadeia com mais de 2 chamadas de ferramenta consecutivas, emita 1 frase curta com o que está inspecionando e o achado parcial antes da próxima ferramenta.
 
 ## 5. Roteamento de skills
 

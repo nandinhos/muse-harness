@@ -2,7 +2,7 @@
 """safety-gate.py — Host adapter Muse sobre motor `ceh_core` + `adapters` vendored.
 
 Integração absorção-0.9.0: o veredito é calculado pelo motor vendored em
-`hooks/vendor/ceh/` (CEH v2.1.2, ref `76eaf76`). Este arquivo contém ZERO
+`hooks/vendor/ceh/` (CEH v2.1.3, ref `550848a`). Este arquivo contém ZERO
 lógica de regra — só roteamento de formato para o protocolo nativo do Muse.
 
 Contrato dual (sonda E19: runtime executa o hook do cache, decide pelo stdout):

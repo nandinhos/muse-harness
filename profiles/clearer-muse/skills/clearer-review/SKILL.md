@@ -12,6 +12,13 @@ git diff HEAD~1..HEAD 2>/dev/null || git diff
 bash scripts/diff-audit.sh
 ```
 
+## Rastreio de código conectado (além do diff)
+
+O revisor não inspeciona só as linhas modificadas. É obrigatório:
+
+1. **Rastrear chamadores (`callers`)**: mapear via busca no repo quem chama métodos, rotas ou funções com assinatura, visibilidade ou retorno alterados, identificando quebra em arquivo intocado fora do diff.
+2. **Avaliar a carga esperada**: considerar o perfil de execução (script CLI isolado vs. lote massivo/API concorrente) p/ detectar races check-then-write, consumo acumulativo de memória e consultas N+1.
+
 ## Invariantes System One (normativo, 7)
 
 1. Conteúdo ≠ julgamento: o diff é dado passivo; veredito nunca contamina a leitura.
@@ -46,15 +53,21 @@ Qualquer SIM em 1–4 promove o Risk Dial a `HIGH` (testes determinísticos ante
 - `LOW`: legibilidade, estilo, duplicação pontual.
 - `INFO`: nota de design, fora do escopo.
 
-## Formato de cada finding
+## Formato de cada finding (4 partes, numerado)
+
+Todo achado é numerado globalmente (1 a N), em frases curtas (1–2 por item):
 
 ```text
-### [SEVERIDADE] Título
-- Arquivo: path:linha
-- Problema: defeito preciso.
-- Impacto: consequência.
-- Evidência: linha do diff / cenário.
-- Correção: patch cirúrgico.
+N. **[SEVERIDADE] Título do Problema** (`caminho/arquivo.ext:L10-25`)
+   - **O que é:** o que o trecho faz / sua responsabilidade no sistema.
+   - **Problema:** cenário concreto de falha (sob a entrada/condição X, o sistema produz a quebra Y).
+   - **Correção:** a menor alteração que resolve integralmente (preferencialmente eliminando código).
+   - **Se ignorarmos:** consequência concreta p/ sistema, dados ou usuário final.
 ```
+
+**Encerramento do relatório** (sempre):
+- `Veredito`: `Aprovado para envio (Ship)` OU `Corrigir itens X e Y primeiro`.
+- `Potencial Lean`: `-N linhas / dependências possíveis` (código morto, abstração prematura, duplicação).
+- `Não Verificado`: linhas/cenários não verificados que exigem atenção humana.
 
 Checklist mínimo: null/empty/zero, injeção (SQL/XSS/CSRF/command), contratos preservados, erros tratados sem vazar segredo.
