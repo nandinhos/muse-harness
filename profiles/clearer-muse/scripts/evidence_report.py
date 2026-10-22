@@ -6,6 +6,7 @@
 # adaptadas ao layout Muse (hooks do profile + .mcp.json/templates/mcp.json
 # do projeto alvo) — semântica de 3 estados idêntica. Veredito calculado,
 # nunca declarado (Invariante 6: código detém o veredito).
+# Etapa 3: + fixes oficiais 2d7b5f5/f9a22ed (parts[0], +x, ENV=, não-dict).
 """
 evidence_report.py - Relatório canônico de evidências do CEH (Response Contract).
 
@@ -31,7 +32,9 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -137,25 +140,65 @@ def inspect_integrations(tests_state: str) -> list[dict]:
     """
     integrations: list[dict] = []
 
+    def local_target(token: str, base: Path) -> Path | None:
+        if Path(token).is_file():
+            return Path(token)
+        if (base / token).is_file():
+            return base / token
+        return None
+
+    def executable_problem(first: str, base: Path) -> str:
+        # Etapa 3 (oficial 2d7b5f5+f9a22ed): valida parts[0] como o upstream.
+        if first.startswith((".", "/")) or "/" in first:
+            target = local_target(first, base)
+            if target is None:
+                return f"executável local `{first}` não encontrado"
+            if not os.access(target, os.X_OK):
+                return f"executável local `{first}` sem permissão de execução"
+            return ""
+        if not shutil.which(first):
+            return f"comando `{first}` ausente no PATH"
+        return ""
+
     plugin_file = Path("profiles/clearer-muse/.muse-plugin/plugin.json")
     if plugin_file.is_file():
         try:
             data = json.loads(plugin_file.read_text(encoding="utf-8"))
-            hooks = data.get("capabilities", {}).get("hooks", []) if isinstance(data, dict) else []
+            if not isinstance(data, dict):
+                integrations.append({"name": plugin_file.name, "type": "hook", "file": str(plugin_file), "status": "pending", "detail": f"arquivo `{plugin_file}` com estrutura inválida (esperado objeto/dicionário)"})
+                data = {}
+            hooks = data.get("capabilities", {}).get("hooks", [])
             if isinstance(hooks, list):
                 for hook_def in hooks:
                     if not isinstance(hook_def, dict):
                         continue
                     name = str(hook_def.get("id") or "hook")
                     cmd = hook_def.get("command")
-                    parts = [str(p) for p in cmd] if isinstance(cmd, list) else (cmd.split() if isinstance(cmd, str) else [])
-                    broken, broken_reason = False, ""
-                    for part in parts[1:]:
-                        if part.endswith((".py", ".sh", ".js")) and not Path(part).is_file() \
-                                and not (plugin_file.parent.parent / part).is_file():
-                            broken, broken_reason = True, f"script `{part}` não encontrado"
-                            break
-                    if broken:
+                    if isinstance(cmd, list):
+                        parts = [str(p) for p in cmd]
+                    elif isinstance(cmd, str):
+                        try:
+                            parts = shlex.split(cmd)
+                        except Exception:
+                            parts = cmd.split()
+                    else:
+                        parts = []
+                    idx = 0
+                    while idx < len(parts) and re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*=", parts[idx]):
+                        idx += 1
+                    broken_reason = ""
+                    if not parts:
+                        broken_reason = f"hook `{name}` sem comando declarado"
+                    elif idx >= len(parts):
+                        broken_reason = f"comando `{cmd}` contém apenas variáveis de ambiente"
+                    else:
+                        broken_reason = executable_problem(parts[idx], plugin_file.parent.parent)
+                        if not broken_reason:
+                            for part in parts[idx + 1:]:
+                                if part.endswith((".py", ".sh", ".js")) and local_target(part, plugin_file.parent.parent) is None:
+                                    broken_reason = f"script `{part}` não encontrado"
+                                    break
+                    if broken_reason:
                         status, detail = "pending", f"`{name}` em `{plugin_file}`: {broken_reason}"
                     elif tests_state == "PASS":
                         status, detail = "validated", f"`{name}` em `{plugin_file}` verificado e ativo"
@@ -170,20 +213,29 @@ def inspect_integrations(tests_state: str) -> list[dict]:
             continue
         try:
             data = json.loads(mcp_file.read_text(encoding="utf-8"))
-            servers = data.get("mcpServers") if isinstance(data, dict) else None
+            if not isinstance(data, dict):
+                integrations.append({"name": mcp_file.name, "type": "mcp", "file": str(mcp_file), "status": "pending", "detail": f"arquivo `{mcp_file}` com estrutura inválida (esperado objeto/dicionário)"})
+                continue
+            servers = data.get("mcpServers")
+            if servers is not None and not isinstance(servers, dict):
+                integrations.append({"name": mcp_file.name, "type": "mcp", "file": str(mcp_file), "status": "pending", "detail": f"arquivo `{mcp_file}` com `mcpServers` inválido (esperado objeto/dicionário)"})
+                continue
             if isinstance(servers, dict):
                 for srv_name, srv_def in servers.items():
                     cmd = srv_def.get("command") if isinstance(srv_def, dict) else None
                     if not cmd:
                         status, detail = "pending", f"servidor MCP `{srv_name}` sem comando declarado"
-                    elif cmd.startswith((".", "/")) and not Path(cmd).is_file():
-                        status, detail = "pending", f"servidor MCP `{srv_name}`: executável local `{cmd}` não encontrado"
-                    elif not cmd.startswith((".", "/")) and not shutil.which(cmd):
-                        status, detail = "pending", f"servidor MCP `{srv_name}`: comando `{cmd}` ausente no PATH"
-                    elif tests_state == "PASS":
-                        status, detail = "validated", f"servidor MCP `{srv_name}` configurado e acessível (`{cmd}`)"
                     else:
-                        status, detail = "configured without execution", f"servidor MCP `{srv_name}` configurado sem teste de execução"
+                        # Problema calculado antes do estado: executável local íntegro
+                        # também chega a validated/configured (o upstream deixa status
+                        # sem atribuição nesse ramo; desvio deliberado, ver E36).
+                        problem = executable_problem(str(cmd), mcp_file.parent)
+                        if problem:
+                            status, detail = "pending", f"servidor MCP `{srv_name}`: {problem}"
+                        elif tests_state == "PASS":
+                            status, detail = "validated", f"servidor MCP `{srv_name}` configurado e acessível (`{cmd}`)"
+                        else:
+                            status, detail = "configured without execution", f"servidor MCP `{srv_name}` configurado sem teste de execução"
                     integrations.append({"name": srv_name, "type": "mcp", "file": str(mcp_file), "status": status, "detail": detail})
         except Exception:
             integrations.append({"name": mcp_file.name, "type": "mcp", "file": str(mcp_file), "status": "pending", "detail": f"arquivo `{mcp_file}` ilegível"})

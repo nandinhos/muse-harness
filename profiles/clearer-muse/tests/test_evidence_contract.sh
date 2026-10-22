@@ -304,6 +304,117 @@ if [[ "$O28" == *'[pending] .mcp.json (mcp)'* && "$O28" == *'**FALHOU**'* ]]; th
 else bad "E28-m2-mcp-corrompido-falhou" "out=[$(echo "$O28" | head -c 300)]"; fi
 rm -rf "$T"
 
+# --- E29 Etapa3: parts[0] do hook ausente no PATH => pending => FALHOU ---
+T=$(fresh_repo)
+mkdir -p "$T/profiles/clearer-muse/.muse-plugin" "$T/profiles/clearer-muse/hooks"
+printf '#!/usr/bin/env python3\n' > "$T/profiles/clearer-muse/hooks/safety-gate.py"
+printf '%s\n' '{"capabilities":{"hooks":[{"id":"badbin-hook","command":["nonexistent_binary_xyz_98765","hooks/safety-gate.py"],"event":"PreToolUse"}]}}' > "$T/profiles/clearer-muse/.muse-plugin/plugin.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: hook binario ausente"
+H29=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H29"
+O29="$(run_rep "$T")"
+if [[ "$O29" == *'[pending] badbin-hook (hook)'* && "$O29" == *'ausente no PATH'* && "$O29" == *'**FALHOU**'* ]]; then ok "E29-hook-parts0-ausente-falhou";
+else bad "E29-hook-parts0-ausente-falhou" "out=[$(echo "$O29" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E30 Etapa3: plugin.json como lista => pending estrutura invalida => FALHOU ---
+T=$(fresh_repo)
+mkdir -p "$T/profiles/clearer-muse/.muse-plugin"
+printf '%s\n' '[]' > "$T/profiles/clearer-muse/.muse-plugin/plugin.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: plugin lista"
+H30=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H30"
+O30="$(run_rep "$T")"
+if [[ "$O30" == *'[pending] plugin.json (hook)'* && "$O30" == *'estrutura inválida'* && "$O30" == *'**FALHOU**'* ]]; then ok "E30-plugin-lista-falhou";
+else bad "E30-plugin-lista-falhou" "out=[$(echo "$O30" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E31 Etapa3: .mcp.json como lista => pending => FALHOU ---
+T=$(fresh_repo)
+printf '%s\n' '[]' > "$T/.mcp.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: mcp lista"
+H31=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H31"
+O31="$(run_rep "$T")"
+if [[ "$O31" == *'[pending] .mcp.json (mcp)'* && "$O31" == *'estrutura inválida'* && "$O31" == *'**FALHOU**'* ]]; then ok "E31-mcp-lista-falhou";
+else bad "E31-mcp-lista-falhou" "out=[$(echo "$O31" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E32 Etapa3: mcpServers como lista => pending => FALHOU ---
+T=$(fresh_repo)
+printf '%s\n' '{"mcpServers":[]}' > "$T/.mcp.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: mcpServers lista"
+H32=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H32"
+O32="$(run_rep "$T")"
+if [[ "$O32" == *'[pending] .mcp.json (mcp)'* && "$O32" == *'`mcpServers` inválido'* && "$O32" == *'**FALHOU**'* ]]; then ok "E32-mcpservers-lista-falhou";
+else bad "E32-mcpservers-lista-falhou" "out=[$(echo "$O32" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E33 Etapa3: MCP sem campo command => pending => FALHOU (fecha INFO da Etapa 2) ---
+T=$(fresh_repo)
+printf '%s\n' '{"mcpServers":{"sem-cmd":{"args":["run"]}}}' > "$T/.mcp.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: mcp sem comando"
+H33=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H33"
+O33="$(run_rep "$T")"
+if [[ "$O33" == *'[pending] sem-cmd (mcp)'* && "$O33" == *'sem comando declarado'* && "$O33" == *'**FALHOU**'* ]]; then ok "E33-mcp-sem-comando-falhou";
+else bad "E33-mcp-sem-comando-falhou" "out=[$(echo "$O33" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E34 Etapa3: MCP local sem permissao de execucao => pending => FALHOU ---
+T=$(fresh_repo)
+printf '#!/bin/sh\necho ok\n' > "$T/mcp_server"; chmod 644 "$T/mcp_server"
+printf '%s\n' '{"mcpServers":{"no-x-mcp":{"command":"./mcp_server"}}}' > "$T/.mcp.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: mcp sem execucao"
+H34=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H34"
+O34="$(run_rep "$T")"
+if [[ "$O34" == *'[pending] no-x-mcp (mcp)'* && "$O34" == *'sem permissão de execução'* && "$O34" == *'**FALHOU**'* ]]; then ok "E34-mcp-sem-x-falhou";
+else bad "E34-mcp-sem-x-falhou" "out=[$(echo "$O34" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E35 Etapa3: hook string com prefixos ENV= validos => validated ---
+T=$(fresh_repo)
+mkdir -p "$T/profiles/clearer-muse/.muse-plugin" "$T/profiles/clearer-muse/hooks"
+printf '#!/usr/bin/env python3\n' > "$T/profiles/clearer-muse/hooks/safety-gate.py"
+printf '%s\n' '{"capabilities":{"hooks":[{"id":"env-hook","command":"PYTHONPATH=. FOO=bar python3 hooks/safety-gate.py","event":"PreToolUse"}]}}' > "$T/profiles/clearer-muse/.muse-plugin/plugin.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: hook env prefix"
+H35=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H35"
+O35="$(run_rep "$T")"
+if [[ "$O35" == *'[validated] env-hook (hook)'* && "$O35" == *'**VERIFICADO**'* ]]; then ok "E35-hook-env-prefix-validado";
+else bad "E35-hook-env-prefix-validado" "out=[$(echo "$O35" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E36 Etapa3: MCP local junto ao arquivo (templates/) com +x => validated ---
+T=$(fresh_repo)
+mkdir -p "$T/templates"
+printf '#!/bin/sh\necho ok\n' > "$T/templates/mcp_server"; chmod 755 "$T/templates/mcp_server"
+printf '%s\n' '{"mcpServers":{"local-ok":{"command":"./mcp_server"}}}' > "$T/templates/mcp.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: mcp local junto ao arquivo"
+H36=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H36"
+O36="$(run_rep "$T")"
+if [[ "$O36" == *'[validated] local-ok (mcp)'* && "$O36" == *'**VERIFICADO**'* ]]; then ok "E36-mcp-local-junto-validado";
+else bad "E36-mcp-local-junto-validado" "out=[$(echo "$O36" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E37 Etapa3: hook executavel direto sem +x => pending => FALHOU ---
+T=$(fresh_repo)
+mkdir -p "$T/profiles/clearer-muse/.muse-plugin" "$T/profiles/clearer-muse/hooks"
+printf '#!/bin/sh\necho ok\n' > "$T/profiles/clearer-muse/hooks/gate.sh"; chmod 644 "$T/profiles/clearer-muse/hooks/gate.sh"
+printf '%s\n' '{"capabilities":{"hooks":[{"id":"direct-hook","command":["./hooks/gate.sh"],"event":"PreToolUse"}]}}' > "$T/profiles/clearer-muse/.muse-plugin/plugin.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: hook direto sem x"
+H37=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H37"
+O37="$(run_rep "$T")"
+if [[ "$O37" == *'[pending] direct-hook (hook)'* && "$O37" == *'sem permissão de execução'* && "$O37" == *'**FALHOU**'* ]]; then ok "E37-hook-direto-sem-x-falhou";
+else bad "E37-hook-direto-sem-x-falhou" "out=[$(echo "$O37" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E38 Etapa3: hook sem comando declarado => pending => FALHOU ---
+T=$(fresh_repo)
+mkdir -p "$T/profiles/clearer-muse/.muse-plugin"
+printf '%s\n' '{"capabilities":{"hooks":[{"id":"nocmd-hook","event":"PreToolUse"}]}}' > "$T/profiles/clearer-muse/.muse-plugin/plugin.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: hook sem comando"
+H38=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H38"
+O38="$(run_rep "$T")"
+if [[ "$O38" == *'[pending] nocmd-hook (hook)'* && "$O38" == *'sem comando declarado'* && "$O38" == *'**FALHOU**'* ]]; then ok "E38-hook-sem-comando-falhou";
+else bad "E38-hook-sem-comando-falhou" "out=[$(echo "$O38" | head -c 300)]"; fi
+rm -rf "$T"
+
 echo "---"
 echo "EVIDENCE-CONTRACT: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
 [[ "$FAIL" -eq 0 ]]
