@@ -9,9 +9,9 @@
 | Item | Valor |
 |---|---|
 | Origem | `clearer-engineering/scripts/{ceh_core/,adapters/,safety-gate.py,hook_context.py}` |
-| Ref validada | `76eaf76` (`main`, CEH **v2.1.2**, absorção muse-0.9.0) |
-| Extração | `git archive 76eaf76 <paths>` (sem `__pycache__`) |
-| sha256 do bundle (23 arquivos `.py`) | `39db9e70f2dd90f1b15b114357681c376f43a9f1aaa5df93fb1ca2083ea634db` |
+| Ref validada | `550848a` (`main`, CEH **v2.1.3** + Ponytail v5, Etapa 3; anterior: `76eaf76`, v2.1.2) |
+| Extração | `git archive 550848a <paths>` (sem `__pycache__`) |
+| sha256 do bundle (23 arquivos `.py`) | `dc75ccb9d5126bcded82b0333bd6981ee32faa572ea54fd899b8dc9ab8a97e39` |
 | Verificação (reproduzível; cobrada em `C13`) | `(cd hooks/vendor/ceh && find . -type f -name '*.py' \| LC_ALL=C sort \| xargs sha256sum \| sha256sum)` |
 | Consumidor | `../safety-gate.py` (adapter fino do host Muse sobre `adapters/muse.py`) |
 
@@ -35,6 +35,6 @@ git archive <nova-ref-validada> clearer-engineering/scripts/ceh_core \
   clássico `:(){ :|:& };:` não casava o padrão em nenhum fragmento e o motor
   puro retornava `allow` (OBSERVED em 2026-09-28). O upstream corrigiu com
   early catastrophic check em `evaluate_command()` (`main 6fc5a07`, CEH v1.3.1)
-  e o adapter voltou a delegar 100% ao motor. Na v2.1.2 o check vive em
+  e o adapter voltou a delegar 100% ao motor. Desde a v2.1.2 o check vive em
   `ceh_core/engine.py` (invariante P2). Nenhum controle compensatório
   ativo no momento.
