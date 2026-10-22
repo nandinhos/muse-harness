@@ -118,6 +118,66 @@ else
   bad "smoke-docaudit-home-regex" "amostras do regex falharam"
 fi
 
+# --- Etapa3: test-runner ignora stub "no test specified" do npm (U09) ---
+TSN="$(mktemp -d)"
+printf '%s\n' '{"scripts":{"test":"echo \"Error: no test specified\" && exit 1"}}' > "$TSN/package.json"
+OUTSN="$(cd "$TSN" && bash "$SCR/test-runner.sh" 2>&1)"; RCSN=$?
+if [[ "$RCSN" -eq 3 && "$OUTSN" == *'STATUS: NOT RUN'* ]]; then ok "smoke-runner-npm-stub";
+else bad "smoke-runner-npm-stub" "rc=$RCSN out=[$(echo "$OUTSN" | head -c 200)]"; fi
+rm -rf "$TSN"
+
+# --- Etapa3: test-runner despacha p/ docker_service do config (U09, docker stub) ---
+TDS="$(mktemp -d)"; BDS="$(mktemp -d)"
+git -C "$TDS" init -b main -q; git -C "$TDS" config user.name T; git -C "$TDS" config user.email t@t.l
+mkdir -p "$TDS/.ceh"
+printf '%s\n' '{"canonical_test_command":"true","docker_service":"web"}' > "$TDS/.ceh/config.json"
+printf 'services:\n  db:\n    image: x\n  web:\n    image: x\n' > "$TDS/docker-compose.yml"
+git -C "$TDS" add .; git -C "$TDS" commit -qm base
+cat > "$BDS/docker" <<'STUB'
+#!/usr/bin/env bash
+if [[ "${1:-}" == "info" ]]; then exit 0; fi
+if [[ "${1:-}" == "compose" && "${2:-}" == "ps" ]]; then printf 'db\nweb\n'; exit 0; fi
+if [[ "${1:-}" == "compose" && "${2:-}" == "exec" ]]; then shift 4; exec "$@"; fi
+exit 0
+STUB
+chmod +x "$BDS/docker"
+OUTDS="$(cd "$TDS" && PATH="$BDS:$PATH" bash "$SCR/test-runner.sh" 2>&1)"; RCDS=$?
+if [[ "$RCDS" -eq 0 && "$OUTDS" == *'docker compose exec -T web true'* ]]; then ok "smoke-runner-docker-service";
+else bad "smoke-runner-docker-service" "rc=$RCDS out=[$(echo "$OUTDS" | head -c 300)]"; fi
+
+# --- Etapa3: detect-project escolhe servico primario conhecido (docker stub) ---
+cat > "$BDS/docker" <<'STUB'
+#!/usr/bin/env bash
+if [[ "${1:-}" == "info" ]]; then exit 0; fi
+if [[ "${1:-}" == "compose" && "${2:-}" == "ps" ]]; then printf 'db\nphp\n'; exit 0; fi
+exit 0
+STUB
+chmod +x "$BDS/docker"
+OUTDP="$(PATH="$BDS:$PATH" bash "$SCR/detect-project.sh" "$TDS" 2>&1)"
+if [[ "$OUTDP" == *'docker compose exec -T php <cmd>'* ]]; then ok "smoke-detect-primary-svc";
+else bad "smoke-detect-primary-svc" "out=[$(echo "$OUTDP" | head -c 300)]"; fi
+rm -rf "$TDS" "$BDS"
+
+# --- Etapa3: doc-audit reprova SKILL.md sem frontmatter (U05 adaptado) ---
+DFR="$(mktemp -d)"
+printf '# X\n' > "$DFR/README.md"
+mkdir -p "$DFR/profiles/p/skills/bad"
+printf '# sem frontmatter\n' > "$DFR/profiles/p/skills/bad/SKILL.md"
+OUTFR="$(python3 "$SCR/doc-audit.py" "$DFR" 2>&1)"; RCFR=$?
+if [[ "$RCFR" -eq 1 && "$OUTFR" == *'frontmatter'* ]]; then ok "smoke-docaudit-frontmatter-red";
+else bad "smoke-docaudit-frontmatter-red" "rc=$RCFR out=[$(echo "$OUTFR" | head -c 300)]"; fi
+rm -rf "$DFR"
+
+# --- Etapa3: doc-audit aprova SKILL.md com frontmatter name+description ---
+DFG="$(mktemp -d)"
+printf '# X\n' > "$DFG/README.md"
+mkdir -p "$DFG/profiles/p/skills/good"
+printf -- '---\nname: good\ndescription: skill valida\n---\n# ok\n' > "$DFG/profiles/p/skills/good/SKILL.md"
+OUTFG="$(python3 "$SCR/doc-audit.py" "$DFG" 2>&1)"; RCFG=$?
+if [[ "$RCFG" -eq 0 && "$OUTFG" == *'Frontmatter'* && "$OUTFG" == *'SUCESSO: 6/6'* ]]; then ok "smoke-docaudit-frontmatter-green";
+else bad "smoke-docaudit-frontmatter-green" "rc=$RCFG out=[$(echo "$OUTFG" | head -c 300)]"; fi
+rm -rf "$DFG"
+
 echo "---"
 echo "SCRIPTS-SMOKE: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
 [[ "$FAIL" -eq 0 ]]

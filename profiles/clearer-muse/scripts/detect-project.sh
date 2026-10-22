@@ -46,7 +46,13 @@ echo "runtime: $RUNTIME_MODE${ACTIVE_SVC:+ ($ACTIVE_SVC)}"
 CI_CMDS=$(grep -hE '^[[:space:]]*run:[[:space:]]*.*(test|pest|phpunit|pytest)' .github/workflows/*.yml .github/workflows/*.yaml .gitlab-ci.yml 2>/dev/null | sed -e 's/^[[:space:]]*run:[[:space:]]*//' | sort -u | tr '\n' ';' || true)
 [[ -n "$CI_CMDS" ]] && echo "ci-cmd: $CI_CMDS"
 if [[ "$RUNTIME_MODE" == "DOCKER_ACTIVE" ]]; then
-  echo "local-exec: docker compose exec -T <svc> <cmd> (ou ./vendor/bin/sail test p/ laravel.test)"
+  # Etapa3: servico primario conhecido (app|web|php|backend), senao o primeiro ativo.
+  PRIMARY_SVC=$(echo "$ACTIVE_SVC" | head -n 1)
+  SVC_LIST=" $(echo "$ACTIVE_SVC" | tr '\n' ' ') "
+  for cand_svc in laravel.test app web php backend; do
+    if [[ "$SVC_LIST" =~ " $cand_svc " ]]; then PRIMARY_SVC="$cand_svc"; break; fi
+  done
+  echo "local-exec: docker compose exec -T $PRIMARY_SVC <cmd> (ou ./vendor/bin/sail test p/ laravel.test)"
 elif [[ "$RUNTIME_MODE" == "DOCKER_STOPPED" ]]; then
   echo "local-exec: containers desligados -> host nativo (ou 'docker compose up -d')"
 fi

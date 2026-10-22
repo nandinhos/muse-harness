@@ -16,7 +16,7 @@ detect_cmd() {
   if [[ -f vendor/bin/pest ]]; then echo "./vendor/bin/pest";
   elif [[ -f vendor/bin/phpunit || -f phpunit.xml ]]; then echo "./vendor/bin/phpunit";
   elif [[ -f artisan ]]; then echo "php artisan test";
-  elif [[ -f package.json ]] && grep -q '"test"' package.json 2>/dev/null; then
+  elif [[ -f package.json ]] && grep -q '"test"' package.json 2>/dev/null && ! grep -q 'no test specified' package.json 2>/dev/null; then
     if [[ -f pnpm-lock.yaml ]]; then echo "pnpm test";
     elif [[ -f yarn.lock ]]; then echo "yarn test"; else echo "npm test"; fi
   elif command -v pytest >/dev/null 2>&1 && [[ -d tests ]]; then echo "pytest";
@@ -25,15 +25,17 @@ detect_cmd() {
 }
 DETECTED_CMD=$(detect_cmd)
 # --- Comando canônico: pinado em .ceh/config.json (lido do HEAD) ou detectado ---
-CONFIG_CMD=""; CONFIG_OK=1
+CONFIG_CMD=""; CONFIG_OK=1; CONFIG_DOCKER_SVC=""
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   if [[ -f "$REPO_ROOT/.ceh/config.json" ]]; then
     if git cat-file -e "HEAD:.ceh/config.json" 2>/dev/null && git -C "$REPO_ROOT" diff --quiet HEAD -- .ceh/config.json 2>/dev/null; then
       CONFIG_CMD=$(git -C "$REPO_ROOT" show "HEAD:.ceh/config.json" 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin).get("canonical_test_command",""))' 2>/dev/null) || CONFIG_OK=0
+      CONFIG_DOCKER_SVC=$(git -C "$REPO_ROOT" show "HEAD:.ceh/config.json" 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin).get("docker_service",""))' 2>/dev/null || true)
     else CONFIG_OK=0; fi
   elif git cat-file -e "HEAD:.ceh/config.json" 2>/dev/null; then CONFIG_OK=0; fi
 elif [[ -f "$REPO_ROOT/.ceh/config.json" ]]; then
   CONFIG_CMD=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("canonical_test_command",""))' "$REPO_ROOT/.ceh/config.json" 2>/dev/null) || CONFIG_OK=0
+  CONFIG_DOCKER_SVC=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("docker_service",""))' "$REPO_ROOT/.ceh/config.json" 2>/dev/null || true)
 fi
 # Precedência fiel ao CEH: override explícito > pinado no config > detectado.
 if [[ $# -gt 0 ]]; then CMD="$*";
@@ -50,12 +52,20 @@ if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
 fi
 if [[ -n "$ACTIVE_SERVICES" ]]; then
   if [[ ! "$CMD" =~ (docker|docker-compose|sail) ]]; then
-    if [[ " $ACTIVE_SERVICES " =~ " laravel.test " ]]; then
+    SVC_LIST=" $(echo "$ACTIVE_SERVICES" | tr '\n' ' ') "
+    if [[ "$SVC_LIST" =~ " laravel.test " ]]; then
       if [[ -f vendor/bin/sail ]]; then CMD="./vendor/bin/sail test";
       else CMD="docker compose exec -T laravel.test $CMD"; fi
-    elif [[ " $ACTIVE_SERVICES " =~ " app " ]]; then
-      CMD="docker compose exec -T app $CMD";
-    else FIRST=$(echo "$ACTIVE_SERVICES" | head -n 1); CMD="docker compose exec -T $FIRST $CMD"; fi
+    else
+      # Etapa3/U09: docker_service do config, depois servicos conhecidos, senao o primeiro ativo.
+      DISPATCHED=0
+      for cand_svc in "$CONFIG_DOCKER_SVC" app web php backend; do
+        if [[ -n "$cand_svc" && "$SVC_LIST" =~ " $cand_svc " ]]; then
+          CMD="docker compose exec -T $cand_svc $CMD"; DISPATCHED=1; break
+        fi
+      done
+      if [[ $DISPATCHED -eq 0 ]]; then FIRST=$(echo "$ACTIVE_SERVICES" | head -n 1); CMD="docker compose exec -T $FIRST $CMD"; fi
+    fi
     echo "[CEH RUNTIME ADAPTER] containers ativos -> despachando via Docker ($CMD)"
   fi
 elif [[ -f docker-compose.yml || -f docker-compose.yaml || -f compose.yaml || -f compose.yml ]]; then

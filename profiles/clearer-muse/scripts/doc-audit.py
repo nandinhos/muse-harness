@@ -5,9 +5,10 @@ CLEARER Engineering Harness (CEH) — Document Structure Audit Tool
 Dois layouts, mesma intenção (checks delimitados e determinísticos, fail-closed):
 - Layout CEH (Antigravity): quando existe docs/plano-validacao-*.md, rodam as
   7 checagens originais abaixo, sem alteração de semântica.
-- Layout Muse: sem o plano, rodam 5 checagens espelhadas — links locais
+- Layout Muse: sem o plano, rodam 6 checagens espelhadas — links locais
   resolvem, zero caminho absoluto vazado nos docs vivos, commits citados
-  existem, README sincronizado com os manifestos e orçamento de linhas.
+  existem, README sincronizado com os manifestos, orçamento de linhas e
+  frontmatter YAML das skills (Etapa 3, U05 adaptado).
 Sem nenhum dos dois layouts: exit 2 (nunca verde silencioso).
 Uso: doc-audit.py [raiz-do-repo]  (default: git rev-parse --show-toplevel)
 
@@ -268,7 +269,7 @@ def _read(path):
 
 
 def audit_muse(repo_root):
-    """Layout Muse: 5 checagens delimitadas espelhando a intenção CEH.
+    """Layout Muse: 6 checagens delimitadas espelhando a intenção CEH.
 
     Docs vivos (erro): README.md, HANDOFF.md, docs/CREATE-PROFILE.md,
     docs/EVALS.md, adr/*.md, evals/*.md. Registros datados (demais .md em
@@ -285,7 +286,7 @@ def audit_muse(repo_root):
                and p.parent in (repo_root, repo_root / "docs")]
     errors, infos, passed = [], [], 0
 
-    print("[1/5] Links locais resolvem (docs vivos + registros)...")
+    print("[1/6] Links locais resolvem (docs vivos + registros)...")
     broken = []
     for md in live + records:
         for m in LINK_RX.finditer(_read(md)):
@@ -298,7 +299,7 @@ def audit_muse(repo_root):
         print(f"  • Links locais íntegros em {len(live) + len(records)} arquivos.")
         passed += 1
 
-    print("[2/5] Zero caminho absoluto local nos docs vivos...")
+    print("[2/6] Zero caminho absoluto local nos docs vivos...")
     for md in live:
         found = re.findall(HOME_RX, _read(md))
         if found:
@@ -310,7 +311,7 @@ def audit_muse(repo_root):
         print("  • Docs vivos portáveis.")
         passed += 1
 
-    print("[3/5] Commits citados existem no Git local...")
+    print("[3/6] Commits citados existem no Git local...")
     shallow = subprocess.run(["git", "rev-parse", "--is-shallow-repository"],
                              cwd=repo_root, capture_output=True, text=True).stdout.strip() == "true"
     if shallow:
@@ -329,7 +330,7 @@ def audit_muse(repo_root):
             print(f"  • {len(refs)} commit(s) citado(s) confirmado(s).")
             passed += 1
 
-    print("[4/5] README sincronizado com os manifestos de profile...")
+    print("[4/6] README sincronizado com os manifestos de profile...")
     readme = _read(repo_root / "README.md") if (repo_root / "README.md").exists() else ""
     drift = []
     for manifest in sorted(repo_root.glob("profiles/*/.muse-plugin/plugin.json")):
@@ -351,7 +352,7 @@ def audit_muse(repo_root):
         print("  • Versões, skills e scripts dos manifestos citados no README.")
         passed += 1
 
-    print("[5/5] Orçamento de linhas dos componentes core...")
+    print("[5/6] Orçamento de linhas dos componentes core...")
     over = []
     for rel, cap in (("profiles/clearer-muse/hooks/safety-gate.py", 650),
                      ("profiles/clearer-muse/scripts/test-runner.sh", 200)):
@@ -365,6 +366,20 @@ def audit_muse(repo_root):
     if not over:
         passed += 1
 
+    print("[6/6] Frontmatter YAML das skills (name + description na linha 1)...")
+    bad_fm = []
+    skill_files = sorted(repo_root.glob("profiles/*/skills/*/SKILL.md"))
+    for sf in skill_files:
+        txt = _read(sf)
+        fm = txt.split("---", 2)[1] if txt.startswith("---\n") and txt.count("---") >= 2 else ""
+        if "name:" not in fm or "description:" not in fm:
+            bad_fm.append(f"Skill sem frontmatter YAML 'name:'/'description:' válido na linha 1: {sf.relative_to(repo_root)}")
+    if bad_fm:
+        errors += bad_fm
+    else:
+        print(f"  • Frontmatter válido em {len(skill_files)} SKILL.md.")
+        passed += 1
+
     for info in infos:
         print(f"INFO: {info}")
     print("-" * 50)
@@ -374,7 +389,7 @@ def audit_muse(repo_root):
             print(f"  [{idx}] {err}")
         print("Auditoria documental REJEITADA.")
         return 1
-    print(f"SUCESSO: {passed}/5 checagens estruturais documentais passaram.")
+    print(f"SUCESSO: {passed}/6 checagens estruturais documentais passaram.")
     print("Auditoria estrutural documental APROVADA; coerência semântica integral não avaliada.")
     return 0
 
