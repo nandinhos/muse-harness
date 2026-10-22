@@ -39,16 +39,16 @@ de resposta com evidências e economia de tokens — instalável em qualquer pro
 | 6 | Verificação independente | Testes do repo + `diff-audit` do próprio diff antes de entregar |
 | 7 | Melhoria contínua como rotina | Falhas viram gates permanentes (ADRs, hooks, regressões) |
 
-### O profile `clearer-muse` v0.10.0
+### O profile `clearer-muse` v0.11.0
 
 | Capacidade | Estado |
 |------------|--------|
 | Dispatcher `clearer` (ciclo + Risk Dial + contrato) | ativo |
 | Addon `token-economy` (tetos 8k/4k/2k/1k, compressão, higiene) | ativo |
-| Addon `code-minimalism` (ordem nativo→mínimo, marcação `ponytail:`) | opt-in |
+| Addon `code-minimalism` (Escada Ponytail v5, marcação `shortcut:`) | opt-in |
 | Addon `debugging` (5 gates bloqueantes, relatório lesson-ready) | opt-in |
 | Hook `safety-gate` (`PreToolUse`, veredito vinculante) | ativo |
-| Motor CEH v2.1.2 vendorizado (`hooks/vendor/ceh/`, sha em `VENDOR.md`) | ativo |
+| Motor CEH v2.1.3 vendorizado (`hooks/vendor/ceh/`, ref `550848a`, sha em `VENDOR.md`) | ativo |
 | 15 skills (incl. `clearer-bugfix`, `conselho-seniores` opt-in) | ativo |
 | Suíte do profile 9/9 + smoke-eval 16/16 (`tests/run-all-tests.sh`) | ativo |
 | Profile pessoal `muse-ceh` v0.2.1 (dispatcher, sem hook próprio) | ativo |
@@ -67,7 +67,7 @@ profiles/clearer-muse/        # cópia canônica: skills, commands, hooks, scrip
     clearer-test,clearer-audit,clearer-map,clearer-rules,clearer-adhd,token-economy,
     code-minimalism,debugging,conselho-seniores,learned-lesson}/   # 15 skills
   commands/{clearer.md,token-report.md}
-  hooks/{safety-gate.py (adapter fino),vendor/ceh/ (motor CEH v2.1.2)}
+  hooks/{safety-gate.py (adapter fino),vendor/ceh/ (motor CEH v2.1.3)}
   scripts/{canonical-diff.sh,ceh-help.sh,compress-output.sh,conselho-seniores.sh,
     detect-project.sh,diff-audit.sh,doc-audit.py,doc-audit.sh,evidence-report.sh,
     evidence_report.py,heartbeat.sh,preflight.sh,setup-branches.sh,task-monitor.sh,
@@ -140,16 +140,16 @@ evidence-backed response contract, and token economy — installable in any proj
 | 6 | Independent verification | Repo tests + self `diff-audit` before delivery |
 | 7 | Continuous improvement as routine | Failures become permanent gates (ADRs, hooks, regressions) |
 
-### The `clearer-muse` profile v0.10.0
+### The `clearer-muse` profile v0.11.0
 
 | Capability | Status |
 |------------|--------|
 | `clearer` dispatcher (cycle + Risk Dial + contract) | enabled |
 | `token-economy` addon (8k/4k/2k/1k budgets, compression, hygiene) | enabled |
-| `code-minimalism` addon (native→minimal order, `ponytail:` marks) | opt-in |
+| `code-minimalism` addon (Ponytail v5 ladder, `shortcut:` marks) | opt-in |
 | `debugging` addon (5 blocking gates, lesson-ready report) | opt-in |
 | `safety-gate` hook (`PreToolUse`, binding verdict) | enabled |
-| Vendored CEH v2.1.2 engine (`hooks/vendor/ceh/`, sha in `VENDOR.md`) | enabled |
+| Vendored CEH v2.1.3 engine (`hooks/vendor/ceh/`, ref `550848a`, sha in `VENDOR.md`) | enabled |
 | 15 skills (incl. opt-in `clearer-bugfix`, `conselho-seniores`) | enabled |
 | Profile suite 9/9 + smoke-eval 16/16 (`tests/run-all-tests.sh`) | enabled |
 | Personal `muse-ceh` v0.2.1 profile (dispatcher, no own hook) | enabled |

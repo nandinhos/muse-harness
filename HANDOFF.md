@@ -18,7 +18,7 @@ topologia clássica), com tudo publicado.
 
 | Item | Estado |
 |---|---|
-| `profiles/clearer-muse/` (68 arquivos rastreados) | canônico v0.9.0: 15 skills, 2 commands, hook `safety-gate` (adapter sobre o motor CEH v2.1.2 vendorizado em `hooks/vendor/ceh/`), 16 scripts, suíte `tests/` 9/9 |
+| `profiles/clearer-muse/` | canônico v0.11.0: 15 skills, 2 commands, hook `safety-gate` (adapter sobre o motor CEH v2.1.3 vendorizado em `hooks/vendor/ceh/`, ref `550848a`), 16 scripts, suíte `tests/` 9/9 |
 | `profiles/muse-ceh/` | dispatcher pessoal v0.2.1 (skill + comando + teste, `hooks=0`; ver `HANDOFF-muse-ceh.md`) |
 | `docs/CREATE-PROFILE.md` | guia de criação de profile (anatomia, 7 passos, segredos, checklist, riscos) |
 | `templates/mcp.json` | base MCP só com `context7` + `${CONTEXT7_API_KEY}` (sem segredo) |
@@ -130,3 +130,18 @@ Risk Dial, fail-closed, veredito calculado), em `dev`:
   exit 2 sem layout algum — verde neste repo, vermelho provado em sandbox.
 - Pendente: `muse plugins update muse-ceh` + restart no início da próxima
   sessão (ADR-004) e tarefa-canário do hook único.
+
+## 10. Etapa 3 — CEH v2.1.3 + Ponytail v5 (release v0.11.0)
+
+Execução do plano em `HANDOFF-ETAPA3-ABSORCAO-V213-PONYTAIL-V5.md` (branch
+`dev-absorcao-v213-ponytail-v5`), fases com commit atômico e suíte 9/9 entre
+elas: Fase 1 `inspect_integrations` validado (`0326eb1`); Fase 2 scripts
+v2.1.3 — stub npm ignorado, `docker_service` do config, serviço primário no
+detect, 6º check de frontmatter no `doc-audit` (`63bfe57`); Fase 3 re-vendor
+p/ `550848a` — drift único em `adapters/antigravity.py`, novo sha
+`dc75ccb9…` (`06345b1`); Fase 4 Ponytail v5 — escada de 7 degraus e
+`shortcut:` em `clearer-rules` §4, `code-minimalism` referenciando-a,
+finding em 4 partes + callers em `clearer-review`, Heurística 12 no
+dispatcher (`a60e81b`). Fase 5 é este release; a Fase 6 (certificado,
+evidence strict e `plugins update` dos dois profiles) fecha a etapa —
+push/promoção seguem exigindo `go` separado.
