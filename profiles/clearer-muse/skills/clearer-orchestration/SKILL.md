@@ -51,3 +51,45 @@ Classificador: `python3 scripts/route_classify.py --task "<tarefa>"
 Campos mínimos ao delegar: objetivo em 1 frase, classe/tier com sinais,
 arquivos inspecionados (`arquivo:linha`), testes que provam, riscos
 abertos. Teto de higiene do `token-economy`: 2k tokens por pack.
+
+## Receitas de workflow (planner ↔ executor)
+
+Papéis são subagentes nativos da sessão (um papel por criança, nunca
+definição global duplicada — regra 4). O planner é sempre T4; executores
+nunca aprovam o próprio trabalho.
+
+### HIGH (T4) — pipeline completo com checkpoint
+
+```text
+investigator (read-only) -> architect (plano) -> [checkpoint humano]
+  -> implementer -> test-engineer -> reviewer (adversarial)
+  -> evidence-auditor (claims x provas) -> planner decide
+```
+
+Use quando qualquer sinal HIGH disparar. O checkpoint precede a primeira
+mutação; re-planning trigger devolve ao `architect`, nunca ao executor.
+
+### MEDIUM (T2/T3) — map read-only paralelo + execução única
+
+```text
+planner fatia -> N investigadores read-only em paralelo (1 por pergunta)
+  -> planner sintetiza -> 1 executor implementa -> suíte + review T4
+```
+
+Paralelismo só em leitura; escrita é serializada num único executor para
+o diff continuar auditável em uma passada.
+
+### Review — fan-out com síntese T4
+
+```text
+1 revisor por dimensão (seguranca | corretude | regressao) em paralelo
+  -> sintese T4 deduplica, ordena por severidade e decide
+```
+
+Finding sem evidência (`arquivo:linha` ou comando) volta como
+`UNSUPPORTED`, não como BLOCKER — System One vale dentro do fan-out.
+
+### LOW (T0/T1) — sem orquestração
+
+Turno único direto, sem subagentes (Ponytail): orquestrar tarefa atômica
+custa mais tokens do que executa. O shadow só registra a classificação.

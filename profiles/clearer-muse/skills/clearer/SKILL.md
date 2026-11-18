@@ -28,7 +28,7 @@ O hook `safety-gate` emite o veredito no transcript; trate `WARN`/`DENY` dele co
 - **MEDIUM** (feature, bugfix, refactor, endpoint, regra de negócio — padrão): **execução contínua em turno único** `INSPECT → PLAN → IMPLEMENT → TEST → REVIEW → AUDIT → REPORT`, sem paradas artificiais.
 - **HIGH** (auth core, pagamentos, concorrência, migração destrutiva, segurança): investigação profunda + subagentes nativos com papéis CEH (`investigator` read-only → `architect` plano → `implementer` → `test-engineer` → `reviewer` adversarial → `evidence-auditor`) + checkpoint humano.
 
-O plugin não declara `agents` (família não suportada no Muse): os papéis são desempenhados via subagentes nativos da sessão, um papel por criança, com Evidence Pack entre eles.
+O plugin não declara `agents` (família não suportada no Muse): os papéis são desempenhados via subagentes nativos da sessão, um papel por criança, com Evidence Pack entre eles. Receitas por classe (pipeline HIGH, map paralelo MEDIUM, fan-out de review) e roteamento por tiers em shadow: skill `clearer-orchestration`.
 
 ## 3. Protocolo CLEARER (resumo operacional)
 
