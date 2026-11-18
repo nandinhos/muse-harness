@@ -7,7 +7,7 @@ description: Addon de gestao de tokens do harness. Aplica orcamento por artefato
 
 Tríade de economia portada do CEH, sem dependência obrigatória externa:
 
-1. **Navegação cirúrgica** (equivale ao Graphify): `search` + leitura fatiada (`offset`/`limit`); proibido despejar arquivo inteiro sem necessidade.
+1. **Navegação cirúrgica** (equivale ao Graphify): `search` + leitura fatiada (`offset`/`limit`); proibido despejar arquivo inteiro sem necessidade. Histórico Git via `scripts/git_inspect.py --repo <path> --limit N` (JSON declarativo) em vez de scripts ad-hoc.
 2. **Compressão de shell** (equivale ao RTK): se `rtk` estiver no `PATH`, prefixe comandos verbosos (`rtk git diff`, `rtk pest`, `rtk sail logs`); senão, envolva com `scripts/compress-output.sh`.
 3. **Higiene de sessão**: histórico e dumps pesados fora do contexto; "pense em código".
 

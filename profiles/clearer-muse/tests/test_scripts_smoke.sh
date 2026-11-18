@@ -178,6 +178,48 @@ if [[ "$RCFG" -eq 0 && "$OUTFG" == *'Frontmatter'* && "$OUTFG" == *'SUCESSO: 6/6
 else bad "smoke-docaudit-frontmatter-green" "rc=$RCFG out=[$(echo "$OUTFG" | head -c 300)]"; fi
 rm -rf "$DFG"
 
+# --- Etapa4 F2: telemetria append mascara segredo e caminho de home ---
+TEL="$(mktemp -d)"; TELOG="$TEL/sub/eventos.jsonl"
+FAKEKEY='sk-'"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+if python3 "$SCR/telemetry_log.py" --file "$TELOG" --tool muse.bash --decision allow \
+     --latency-ms 12 --tokens 100 --token-source estimated_chars4 \
+     --note "rodou com chave $FAKEKEY em /home/alice/proj" >/dev/null 2>&1 \
+   && [[ -f "$TELOG" ]] \
+   && grep -q "REDACTED" "$TELOG" \
+   && ! grep -q "sk-ABC" "$TELOG" \
+   && ! grep -q "/home/alice" "$TELOG" \
+   && python3 -c "import json,sys; e=json.loads(open(sys.argv[1]).readline()); assert e['decision']=='allow' and e['tool']=='muse.bash' and e['tokens']==100 and e['token_source']=='estimated_chars4' and e['ts'].endswith('Z')" "$TELOG" 2>/dev/null; then
+  ok "smoke-telemetry-append-mask"
+else
+  bad "smoke-telemetry-append-mask" "append/máscara/schema inválidos"
+fi
+
+# --- Etapa4 F2: decisão inválida = exit 2 sem escrever (fail-closed) ---
+LINES_BEFORE="$(wc -l < "$TELOG" 2>/dev/null || echo 0)"
+python3 "$SCR/telemetry_log.py" --file "$TELOG" --tool muse.bash --decision talvez >/dev/null 2>&1; RCTEL=$?
+LINES_AFTER="$(wc -l < "$TELOG" 2>/dev/null || echo 0)"
+if [[ "$RCTEL" -eq 2 && "$LINES_BEFORE" == "$LINES_AFTER" ]]; then ok "smoke-telemetry-bad-decision";
+else bad "smoke-telemetry-bad-decision" "rc=$RCTEL linhas $LINES_BEFORE->$LINES_AFTER"; fi
+
+# --- Etapa4 F2: agregador offline conta decisões/tokens; ausente = exit 2 ---
+python3 "$SCR/telemetry_log.py" --file "$TELOG" --tool muse.bash --decision deny --latency-ms 30 --rule R15 >/dev/null 2>&1
+python3 "$SCR/telemetry_log.py" --file "$TELOG" --tool muse.bash --decision allow --latency-ms 20 --tokens 50 --token-source api >/dev/null 2>&1
+printf 'linha-invalida\n' >> "$TELOG"
+OUTREP="$(python3 "$SCR/telemetry_report.py" "$TELOG" 2>&1)"; RCREP=$?
+python3 "$SCR/telemetry_report.py" "$TEL/nao-existe.jsonl" >/dev/null 2>&1; RCMISS=$?
+if [[ "$RCREP" -eq 0 && "$RCMISS" -eq 2 && "$OUTREP" == *'eventos=3'* && "$OUTREP" == *'invalidos=1'* && "$OUTREP" == *'allow=2'* && "$OUTREP" == *'deny=1'* && "$OUTREP" == *'estimated_chars4=100'* && "$OUTREP" == *'api=50'* ]]; then
+  ok "smoke-telemetry-report"
+else bad "smoke-telemetry-report" "rc=$RCREP miss=$RCMISS out=[$(echo "$OUTREP" | head -c 300)]"; fi
+rm -rf "$TEL"
+
+# --- Etapa4 F2: git_inspect declarativo (exit 0 válido; repo ruim exit !=0) ---
+OUTGI="$(python3 "$SCR/git_inspect.py" --repo "$ROOT" --limit 2 2>&1)"; RCGI=$?
+python3 "$SCR/git_inspect.py" --repo /caminho/inexistente-xyz >/dev/null 2>&1; RCGIB=$?
+if [[ "$RCGI" -eq 0 && "$RCGIB" -ne 0 ]] \
+   && printf '%s' "$OUTGI" | python3 -c "import json,sys; d=json.load(sys.stdin); assert len(d['commits'])>=1 and len(d['commits'][0]['hash'])>=7 and d['error'] is None" 2>/dev/null; then
+  ok "smoke-git-inspect"
+else bad "smoke-git-inspect" "rc=$RCGI ruim=$RCGIB out=[$(echo "$OUTGI" | head -c 200)]"; fi
+
 echo "---"
 echo "SCRIPTS-SMOKE: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
 [[ "$FAIL" -eq 0 ]]
