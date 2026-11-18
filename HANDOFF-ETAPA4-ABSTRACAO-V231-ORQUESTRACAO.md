@@ -143,7 +143,9 @@ Delta `550848a..4db20b7`: 32 commits, 30 arquivos (+2.872/−274), medido por
 | F3 | `a9e2a7c` | smoke 27 (+2); manifesto válido 16 skills; sonda do corpus 35/36, HIGH 12/12 (M08 registrado, sem ajuste de critério) |
 | F4 | `4912ddb` | safety 16 (+1 fail-closed); achados abaixo |
 | F5 | `897e70a` | ceh-core 19 (+C16a/b árvore idêntica, +C17 `git -C`); C13 sha `eed5a051…`; evals F11 corrigida p/ árvore distinta; timeouts em sondas docker |
-| F6 | _(este commit)_ | smoke 30 (+3); `system_one.py` offline + `stop-guard.py`; decisão drift abaixo |
+| F6 | `412bce4` | smoke 30 (+3); `system_one.py` offline + `stop-guard.py`; decisão drift abaixo |
+| F7 | `ba30e13` | receitas planner↔executor na skill + xref no dispatcher; 9/9 |
+| F8 | _(este commit)_ | `evals/orchestration/run.sh` **PASS 6/6**: HIGH 12/12 T4, acurácia 35/36 (miss M08 registrado sem ajustar critério), 0 LOW em T4, determinismo 3×, deriva detectada, canário de telemetria shadow=3. Limitação honesta: sinais autorados com o corpus no repo — o A/B com modelos vivos (N≥10/célula) segue pré-registrado e pendente |
 
 ### F6 — Decisão `ceh-drift.sh`: NÃO portar (com gatilho)
 
