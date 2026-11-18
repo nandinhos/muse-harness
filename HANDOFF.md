@@ -165,5 +165,29 @@ pelo Pre-Push CI Gate com Certificado de Voo do HEAD, CI verde nas duas
 branches (runs 44389776562 na `dev` e 44389963878 na `main`, ambas
 `success` em `b4ef665`). Veredito pós-promoção: `VERIFICADO` calculado.
 Este parágrafo entra em commit docs posterior na `dev` (sem nova promoção
-neste ciclo). Pendente deliberado: A/B com modelos vivos do roteador
-shadow (critério pré-registrado em `evals/orchestration/CRITERIA.md`).
+neste ciclo). Pendentes vivos: ver §12 (backlog).
+
+## 12. Backlog (pendências abertas)
+
+- [ ] **Fail-open do dispatcher do enhancements — verificação do
+  mantenedor (em casa, host Antigravity).** Achado da F4:
+  `hooks/hooks_dispatcher.py` pula o Elo 1 em silêncio se o motor CEH
+  falha ao carregar (`main` 0.9.3-p0.1 l. 709; branch `7318f93` 0.9.4
+  l. 841; `_SAFETY_GATE_ERROR` nunca é lido; telemetria grava `allow`).
+  Classificação: `OBSERVED` por leitura de código, **suspeito de falso
+  positivo até reprodução dinâmica**. Detalhe completo (cadeia, impacto,
+  correção proposta, par de provas) em
+  `HANDOFF-ETAPA4-ABSTRACAO-V231-ORQUESTRACAO.md` §F4; texto de issue
+  entregue ao mantenedor (efêmero, fora do repo). Reprodução: sombra
+  `hook_context.py` que levanta `ImportError` em cópia sandbox dos
+  hooks + payloads benigno/destrutivo — destrutivo em prod precisa
+  negar com import quebrado. **Próximo passo:** mantenedor reproduz em
+  casa; confirmado → corrige no enhancements (deny nomeado
+  `SAFETY GATE UNAVAILABLE`, espelhando o adapter Muse) e dá feedback
+  aqui; refutado → registrar a evidência que refuta e fechar o item.
+  Impacto neste porte: nenhum (fail-closed provado); a reavaliação do
+  `overwrite` mecânico fica travada até este item fechar.
+- [ ] **A/B com modelos vivos do roteador shadow** — critério
+  pré-registrado em `evals/orchestration/CRITERIA.md` (N≥10/célula,
+  0 BLOCKER perdido). Sem esse número, `clearer-orchestration` continua
+  só classificando/registrando; nenhuma economia pode ser afirmada.
