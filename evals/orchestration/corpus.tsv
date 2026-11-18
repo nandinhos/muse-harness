@@ -1,0 +1,37 @@
+id	classe	tier	tarefa
+L01	LOW	T1	corrigir typo em um comentario de um arquivo
+L02	LOW	T0	renomear uma variavel local em uma funcao
+L03	LOW	T1	atualizar a versao no rodape do readme
+L04	LOW	T0	listar os arquivos de um diretorio
+L05	LOW	T1	adicionar uma linha de log em um script existente
+L06	LOW	T1	ajustar formatacao de uma tabela em markdown
+L07	LOW	T0	explicar o que uma funcao curta faz
+L08	LOW	T1	trocar uma string de mensagem em um unico lugar
+L09	LOW	T1	adicionar um caso simples a um teste existente
+L10	LOW	T0	mostrar o historico recente de commits
+L11	LOW	T1	corrigir um link quebrado na documentacao
+L12	LOW	T1	bump de versao patch em um manifesto
+M01	MEDIUM	T2	implementar um endpoint CRUD simples com teste
+M02	MEDIUM	T2	refatorar uma funcao longa em duas menores
+M03	MEDIUM	T3	adicionar cache com ttl a uma consulta frequente
+M04	MEDIUM	T2	criar um comando CLI novo com flags e ajuda
+M05	MEDIUM	T3	integrar uma API externa com tratamento de erro e retry
+M06	MEDIUM	T2	escrever testes para um modulo sem cobertura
+M07	MEDIUM	T2	migrar um script bash para python mantendo o contrato
+M08	MEDIUM	T3	adicionar paginacao a uma listagem existente
+M09	MEDIUM	T2	corrigir um bug com causa mapeada em dois arquivos
+M10	MEDIUM	T3	implementar upload de arquivo com validacao de tamanho
+M11	MEDIUM	T2	extrair uma classe de servico de um controller gordo
+M12	MEDIUM	T3	adicionar fila assincrona para envio de email
+H01	HIGH	T4	alterar o fluxo de autenticacao e sessao de usuarios
+H02	HIGH	T4	migrar a tabela de pagamentos com dados em producao
+H03	HIGH	T4	mexer na logica de cambio e arredondamento financeiro
+H04	HIGH	T4	corrigir race condition em reserva concorrente de estoque
+H05	HIGH	T4	rotacionar chaves de criptografia dos dados sensiveis
+H06	HIGH	T4	alterar a politica de autorizacao e permissoes por papel
+H07	HIGH	T4	migrar o banco principal para um novo servidor sem downtime
+H08	HIGH	T4	mudar o contrato publico da API consumida por terceiros
+H09	HIGH	T4	corrigir vazamento de dados entre tenants em relatorio
+H10	HIGH	T4	alterar a maquina de estados de pedidos e estornos
+H11	HIGH	T4	remover uma coluna usada em producao com plano de rollback
+H12	HIGH	T4	auditar seguranca do fluxo de reset de senha
