@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | **EM EXECUÇÃO** — `go` dado pelo goal da sessão (executar plano completo, testar, E2E) |
+| Status | **EXECUTADO** — F-doc→F9 com commit atômico por fase; release v0.12.0 ativada localmente. Push/promoção aguardam pedido explícito de publicação (D1) |
 | Origem do plano | Sessão 2026-11-17 (`01a1e958…`), workflow 4 repos + plano D1–D6/F0–F9; recuperado do log Muse após perda do checkout (kernel WSL) e consolidado com a classificação arquivo a arquivo de 2026-11-18 |
 | Fontes (read-only) | `antigravity-clearer-engineering-harness` v2.3.1 (`4db20b7`), `antigravity-harness-enhancements` v3.5.0 (`85351c6`) + pin `7318f93` da branch `dev-security-opt-01-p01` (`abc63dc`), `benchmark-antigravity` v0.13.0 (`2fe6cf1`) |
 | Último marco absorvido | Etapa 3: CEH v2.1.3 + Ponytail v5 (`550848a`) → v0.11.0 (`e3662d0`), **não publicado** (remoto em `ef13379`) |
@@ -145,7 +145,8 @@ Delta `550848a..4db20b7`: 32 commits, 30 arquivos (+2.872/−274), medido por
 | F5 | `897e70a` | ceh-core 19 (+C16a/b árvore idêntica, +C17 `git -C`); C13 sha `eed5a051…`; evals F11 corrigida p/ árvore distinta; timeouts em sondas docker |
 | F6 | `412bce4` | smoke 30 (+3); `system_one.py` offline + `stop-guard.py`; decisão drift abaixo |
 | F7 | `ba30e13` | receitas planner↔executor na skill + xref no dispatcher; 9/9 |
-| F8 | _(este commit)_ | `evals/orchestration/run.sh` **PASS 6/6**: HIGH 12/12 T4, acurácia 35/36 (miss M08 registrado sem ajustar critério), 0 LOW em T4, determinismo 3×, deriva detectada, canário de telemetria shadow=3. Limitação honesta: sinais autorados com o corpus no repo — o A/B com modelos vivos (N≥10/célula) segue pré-registrado e pendente |
+| F8 | `1ebc3e9` | `evals/orchestration/run.sh` **PASS 6/6**: HIGH 12/12 T4, acurácia 35/36 (miss M08 registrado sem ajustar critério), 0 LOW em T4, determinismo 3×, deriva detectada, canário de telemetria shadow=3. Limitação honesta: sinais autorados com o corpus no repo — o A/B com modelos vivos (N≥10/célula) segue pré-registrado e pendente |
+| F9 | `3637579` (+fechamento) | suíte 9/9 (16+30+19+38+6+18+7+13 asserts + eval interno 16), evals 16/16, orch 6/6, Certificado PASS `3637579`, `evidence-report --strict` = **VERIFICADO/ALTA 1.0** (teto V2), manifesto válido (16 skills), plugins atualizados (`clearer-muse` 0.12.0 ativo; canário do hook instalado: allow benigno + block catastrófico). Nota F4+: o harness de teste do host expõe `updated_input` no objeto de decisão — canal de reescrita pode existir no runtime, mas segue fora do contrato do adapter; reavaliar `overwrite` se upstream corrigir o fail-open. Restart da sessão carrega skills 0.12.0 (ADR-004) |
 
 ### F6 — Decisão `ceh-drift.sh`: NÃO portar (com gatilho)
 
