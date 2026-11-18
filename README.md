@@ -72,8 +72,8 @@ profiles/clearer-muse/        # cópia canônica: skills, commands, hooks, scrip
   scripts/{canonical-diff.sh,ceh-help.sh,compress-output.sh,conselho-seniores.sh,
     detect-project.sh,diff-audit.sh,doc-audit.py,doc-audit.sh,evidence-report.sh,
     evidence_report.py,git_inspect.py,heartbeat.sh,preflight.sh,setup-branches.sh,
-    route_classify.py,task-monitor.sh,telemetry_log.py,telemetry_report.py,
-    test-runner.sh,token-budget.py}                                  # 20 arquivos
+    route_classify.py,stop-guard.py,system_one.py,task-monitor.sh,telemetry_log.py,
+    telemetry_report.py,test-runner.sh,token-budget.py}              # 22 arquivos
   tests/{run-all-tests.sh + 8 suítes de contrato/regressão}
 profiles/muse-ceh/              # dispatcher pessoal v0.2.1 (skill + comando + teste, sem hook)
 docs/CREATE-PROFILE.md        # guia: criar um profile harness do zero
@@ -165,7 +165,7 @@ evidence-backed response contract, and token economy — installable in any proj
 ### Layout
 
 Same tree as above: `profiles/clearer-muse/` (canonical source, 16 skills,
-20 script files, 9-suite `tests/`), `profiles/muse-ceh/` (personal dispatcher
+22 script files, 9-suite `tests/`), `profiles/muse-ceh/` (personal dispatcher
 v0.2.1), `docs/`, `templates/mcp.json`, `adr/001–005`, `evals/` (16 asserts),
 `img/CLEARER-MUSE.jpg`, `HANDOFF.md`, `install.sh`, `LICENSE` (MIT).
 

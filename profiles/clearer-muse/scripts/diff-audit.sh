@@ -13,3 +13,8 @@ if git diff | grep -qE '^\+?(<<<<<<<|=======|>>>>>>>)'; then
   echo "BLOCKER: conflict markers no diff" >&2; exit 1
 fi
 echo "OK: sem conflict markers"
+echo "--- 4. System One offline (consultivo, Etapa4 F6) ---"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR/system_one.py" ]]; then
+  python3 "$SCRIPT_DIR/system_one.py" diff-audit --human 2>/dev/null || true
+fi

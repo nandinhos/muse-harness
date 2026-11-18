@@ -241,6 +241,51 @@ if python3 "$ORC" --task "migrar tabela de pagamentos em producao" --telemetry "
 else bad "smoke-route-shadow-telemetry" "evento shadow ausente/inválido"; fi
 rm -rf "$TSH"
 
+# --- Etapa4 F6: System One offline (perguntas atomicas sobre o diff) ---
+TSO="$(mktemp -d)"
+cat > "$TSO/auth.diff" <<'DIFF'
+diff --git a/src/Auth/LoginController.php b/src/Auth/LoginController.php
+--- a/src/Auth/LoginController.php
++++ b/src/Auth/LoginController.php
+@@ -1,3 +1,4 @@
+ <?php
++$token = $request->session()->regenerateToken();
+ return view('login');
+DIFF
+OUTSO="$(python3 "$SCR/system_one.py" --diff-file "$TSO/auth.diff" 2>&1)"; RCSO=$?
+OUTH="$(python3 "$SCR/system_one.py" --diff-file "$TSO/auth.diff" --human 2>&1)"
+if [[ "$RCSO" -eq 0 ]] \
+   && printf '%s' "$OUTSO" | python3 -c "import json,sys; d=json.load(sys.stdin); q={p['id']:p for p in d['perguntas']}; assert q['toca_auth']['resposta']=='SIM' and q['toca_auth']['certeza']==1.0 and q['segredo_provavel']['resposta']=='NAO' and 'T4' in d['recomendacao']" 2>/dev/null \
+   && [[ "$OUTH" == *'toca_auth: SIM'* ]]; then
+  ok "smoke-system-one-auth"
+else bad "smoke-system-one-auth" "rc=$RCSO out=[$(echo "$OUTSO" | head -c 300)] human=[$(echo "$OUTH" | head -c 200)]"; fi
+
+# --- Etapa4 F6: segredo no diff = BLOQUEAR e --strict sai 1 ---
+FAKESK='sk-'"ZYXWVUTSRQPONMLKJIHGFEDCBA9876543210"
+printf 'diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n@@ -0,0 +1 @@\n+KEY = "%s"\n' "$FAKESK" > "$TSO/seg.diff"
+OUTSEG="$(python3 "$SCR/system_one.py" --diff-file "$TSO/seg.diff" --strict 2>&1)"; RCSEG=$?
+if [[ "$RCSEG" -eq 1 ]] \
+   && printf '%s' "$OUTSEG" | python3 -c "import json,sys; d=json.load(sys.stdin); q={p['id']:p for p in d['perguntas']}; assert q['segredo_provavel']['resposta']=='SIM' and 'BLOQUEAR' in d['recomendacao']" 2>/dev/null; then
+  ok "smoke-system-one-segredo"
+else bad "smoke-system-one-segredo" "rc=$RCSEG out=[$(echo "$OUTSEG" | head -c 300)]"; fi
+rm -rf "$TSO"
+
+# --- Etapa4 F6: stop-guard (sem feature = no-op 0; ativa sem contrato = 1) ---
+TSG="$(mktemp -d)"
+python3 "$SCR/stop-guard.py" --repo "$TSG" >/dev/null 2>&1; RCG0=$?
+mkdir -p "$TSG/.ceh"
+printf '{"name":"f1","status":"active"}' > "$TSG/.ceh/feature.json"
+printf 'pronto, terminei tudo' > "$TSG/resp.txt"
+python3 "$SCR/stop-guard.py" --repo "$TSG" --response "$TSG/resp.txt" >/dev/null 2>&1; RCG1=$?
+printf 'RESULT: VERIFICADO (OBSERVED) suite PASS=9 exit 0' > "$TSG/resp.txt"
+python3 "$SCR/stop-guard.py" --repo "$TSG" --response "$TSG/resp.txt" >/dev/null 2>&1; RCG2=$?
+printf 'lixo{' > "$TSG/.ceh/feature.json"
+python3 "$SCR/stop-guard.py" --repo "$TSG" --response "$TSG/resp.txt" >/dev/null 2>&1; RCG3=$?
+if [[ "$RCG0" -eq 0 && "$RCG1" -eq 1 && "$RCG2" -eq 0 && "$RCG3" -eq 2 ]]; then
+  ok "smoke-stop-guard"
+else bad "smoke-stop-guard" "rcs=$RCG0/$RCG1/$RCG2/$RCG3 (esperado 0/1/0/2)"; fi
+rm -rf "$TSG"
+
 echo "---"
 echo "SCRIPTS-SMOKE: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
 [[ "$FAIL" -eq 0 ]]

@@ -142,7 +142,19 @@ Delta `550848a..4db20b7`: 32 commits, 30 arquivos (+2.872/−274), medido por
 | F2 | `51c6216` | smoke 25 asserts (+4); máscara sondada com variantes não enumeradas (0 vazamentos) |
 | F3 | `a9e2a7c` | smoke 27 (+2); manifesto válido 16 skills; sonda do corpus 35/36, HIGH 12/12 (M08 registrado, sem ajuste de critério) |
 | F4 | `4912ddb` | safety 16 (+1 fail-closed); achados abaixo |
-| F5 | _(este commit)_ | ceh-core 19 (+C16a/b árvore idêntica, +C17 `git -C`); C13 sha `eed5a051…`; evals F11 corrigida p/ árvore distinta; timeouts em sondas docker |
+| F5 | `897e70a` | ceh-core 19 (+C16a/b árvore idêntica, +C17 `git -C`); C13 sha `eed5a051…`; evals F11 corrigida p/ árvore distinta; timeouts em sondas docker |
+| F6 | _(este commit)_ | smoke 30 (+3); `system_one.py` offline + `stop-guard.py`; decisão drift abaixo |
+
+### F6 — Decisão `ceh-drift.sh`: NÃO portar (com gatilho)
+
+O drift oficial faz (a) referências quebradas doc→arquivo e (b) alerta
+temporal (código citado mudou depois do doc). A parte (a) já é coberta
+pelo `doc-audit` (links locais, commits citados, README×manifestos); a
+parte (b) é heurística de timestamp — doc correto não muda quando o
+código muda legitimamente. Portar 189 linhas de bash duplicaria o
+encanamento do `doc-audit`. **Gatilho de reavaliação:** se doc
+desatualizada virar defeito observado, adicionar check ao `doc-audit.py`
+existente — não script novo (`shortcut:` registrado aqui).
 
 ### F5 — Divergências deliberadas vs. upstream (registradas)
 
