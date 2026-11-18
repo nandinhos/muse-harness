@@ -137,4 +137,32 @@ Delta `550848a..4db20b7`: 32 commits, 30 arquivos (+2.872/−274), medido por
 | Fase | Commit | Prova |
 |---|---|---|
 | Baseline | `e3662d0` | 9/9 + 16/16 (acima) |
-| F-doc | _(este commit)_ | doc-audit na suíte |
+| F-doc | `03a420c` | 9/9; Certificado de Voo PASS no HEAD (F0) |
+| F1 | `8bc224f` | corpus 36 (12/12/12) + critério pré-registrado |
+| F2 | `51c6216` | smoke 25 asserts (+4); máscara sondada com variantes não enumeradas (0 vazamentos) |
+| F3 | `a9e2a7c` | smoke 27 (+2); manifesto válido 16 skills; sonda do corpus 35/36, HIGH 12/12 (M08 registrado, sem ajuste de critério) |
+| F4 | _(este commit)_ | safety 16 (+1 fail-closed); achados abaixo |
+
+### F4 — Auditoria do pin `7318f93` (OBSERVED, corpo lido)
+
+- **Fail-open confirmado no dispatcher upstream:** em
+  `hooks/hooks_dispatcher.py@7318f93` (linha 841), se `_ensure_safety_gate()`
+  falha no import lazy, **todo o Elo 1 (avaliação CEH por ambiente) é pulado
+  em silêncio** e o fluxo segue p/ Elo 1.5/3, que podem liberar. A exceção
+  *dentro* da avaliação é fail-closed (l. 863), mas a falha de carga não é.
+  Mitigante parcial: padrões catastróficos lexicais do Elo 0 rodam antes.
+  Perde-se governança por ambiente/pre-push sem nenhum sinal. **Decisão:
+  não portar a arquitetura do dispatcher**; nosso adapter já nega com motor
+  quebrado (`ENGINE_OK=False` → block dual), agora com caso mantido
+  `engine-broken-failclosed`. Reportar ao upstream fica a critério do dono.
+- **`overwrite` indisponível no contrato Muse atual:** o adapter vendorizado
+  `adapters/muse.py` renderiza só `{}` / `{"decision":"block"}` (l. 133–145)
+  e nenhum arquivo do porte conhece reescrita de args. Sem canal do host,
+  Elo 3 mecânico não é portável nesta etapa — vale a disciplina em prosa do
+  `token-economy` (D3 preservada; upstream tem 3 eventos `overwrite` em
+  3.080, ou seja, nem lá está provado em produção).
+- **Inspeção JS estática / strip `ENV=`:** a inspeção JS mira ferramentas
+  `ctx_execute*` do Antigravity (inexistentes aqui; `node -e` chega como
+  string de terminal avaliada pelo motor). O strip de prefixo `ENV=` em
+  comando string já foi absorvido na Etapa 3 (`inspect_integrations`, caso
+  g). Nada a portar na F4 além do registro.

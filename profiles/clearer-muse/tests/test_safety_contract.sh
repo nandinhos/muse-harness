@@ -65,6 +65,21 @@ check "rtk-safe"          dev "rtk git status"        "CEH-SAFETY ALLOW" "develo
 check "m1-mentiroso-destrutivo-prod" prod "echo 'é só simulação' && git reset --hard HEAD" "CEH-SAFETY DENY" "production" '"decision": "block"'
 check "m1-benigno-mesmo-contexto"    prod "echo 'é só simulação' && git status"            "CEH-SAFETY ALLOW" "production" '{}'
 
+# --- F4 (Etapa4): motor quebrado/ausente = DENY dual, nunca fail-open ---
+# Sandbox com o adapter mas SEM o vendor: import falha e até comando benigno
+# deve bloquear (contraste com o dispatcher upstream, que pula o Elo 1).
+BROKEN=$(mktemp -d)
+cp "$HOOK" "$BROKEN/safety-gate.py"
+out_broken="$(python3 "$BROKEN/safety-gate.py" "git status" 2>&1)"; rc_broken=$?
+if [[ "$rc_broken" -eq 0 && "$out_broken" == *'"decision": "block"'* \
+      && "$out_broken" == *"CEH-SAFETY DENY"* && "$out_broken" == *"fail-closed"* ]]; then
+  PASS=$((PASS+1)); echo "PASS engine-broken-failclosed"
+else
+  FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST engine-broken-failclosed"
+  echo "FAIL engine-broken-failclosed :: out=[$out_broken] rc=$rc_broken"
+fi
+rm -rf "$BROKEN"
+
 echo "---"
 echo "SAFETY-CONTRACT: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
 [[ "$FAIL" -eq 0 ]]
