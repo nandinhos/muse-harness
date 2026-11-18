@@ -101,6 +101,11 @@
         "enabledDefault": false,
         "id": "clearer-adhd",
         "path": "skills/clearer-adhd/SKILL.md"
+      },
+      {
+        "enabledDefault": false,
+        "id": "clearer-orchestration",
+        "path": "skills/clearer-orchestration/SKILL.md"
       }
     ]
   },

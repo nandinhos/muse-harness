@@ -1,0 +1,44 @@
+{
+  "versao": 1,
+  "modo": "shadow",
+  "tiers": {
+    "T0": {"modelo": "menor custo (mecanico)", "uso": "consulta/listagem sem mutacao"},
+    "T1": {"modelo": "leve", "uso": "edicao atomica de 1 arquivo, causa mapeada"},
+    "T2": {"modelo": "executor de codigo (D6: Spark)", "uso": "feature/bug delimitado com teste"},
+    "T3": {"modelo": "executor forte ou Wonder", "uso": "integracao, cache, fila, upload"},
+    "T4": {"modelo": "Wonder Full (decide e revisa, D6)", "uso": "HIGH: auth, dinheiro, producao, concorrencia"}
+  },
+  "high_signals": [
+    "autenticacao", "autorizacao", "permissao", "pagamento", "producao",
+    "financeiro", "cambio", "estorno", "criptografia", "rotacionar chaves",
+    "race condition", "concorrente", "concorrencia", "tenant", "senha",
+    "migrar tabela", "migrar banco", "migrar o banco", "downtime",
+    "contrato publico", "dados sensiveis", "vazamento de dados",
+    "remover coluna", "rollback", "seguranca"
+  ],
+  "medium_complex_signals": [
+    "cache", "ttl", "integrar", "integracao", "api externa", "retry",
+    "fila", "assincron", "upload"
+  ],
+  "medium_signals": [
+    "implementar", "endpoint", "crud", "refator", "comando cli",
+    "testes para", "migrar um script", "migrar script", "paginacao",
+    "corrigir um bug", "corrigir bug", "extrair", "servico", "modulo",
+    "adicionar paginacao"
+  ],
+  "low_t0_signals": [
+    "listar", "explicar", "historico", "mostrar", "renomear uma variavel",
+    "renomear variavel"
+  ],
+  "low_signals": [
+    "typo", "comentario", "rodape", "formatacao", "link quebrado",
+    "string de mensagem", "linha de log", "bump", "caso simples",
+    "versao patch", "versao no readme"
+  ],
+  "replanning_triggers": [
+    "teste vermelho apos 1 ciclo de auto-reparo",
+    "sinal HIGH descoberto durante execucao de classe menor",
+    "diff toca arquivo fora do Evidence Pack aprovado",
+    "BLOCKER de review em qualquer classe"
+  ]
+}

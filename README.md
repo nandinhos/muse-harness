@@ -49,7 +49,7 @@ de resposta com evidências e economia de tokens — instalável em qualquer pro
 | Addon `debugging` (5 gates bloqueantes, relatório lesson-ready) | opt-in |
 | Hook `safety-gate` (`PreToolUse`, veredito vinculante) | ativo |
 | Motor CEH v2.1.3 vendorizado (`hooks/vendor/ceh/`, ref `550848a`, sha em `VENDOR.md`) | ativo |
-| 15 skills (incl. `clearer-bugfix`, `conselho-seniores` opt-in) | ativo |
+| 16 skills (incl. `clearer-bugfix`, `conselho-seniores`, `clearer-orchestration` opt-in) | ativo |
 | Suíte do profile 9/9 + smoke-eval 16/16 (`tests/run-all-tests.sh`) | ativo |
 | Profile pessoal `muse-ceh` v0.2.1 (dispatcher, sem hook próprio) | ativo |
 | Trava Pre-Push CI Gate (tolerância zero + Certificado de Voo) | ativo |
@@ -65,14 +65,15 @@ de resposta com evidências e economia de tokens — instalável em qualquer pro
 profiles/clearer-muse/        # cópia canônica: skills, commands, hooks, scripts, manifest
   skills/{clearer,clearer-feature,clearer-bugfix,clearer-refactor,clearer-review,
     clearer-test,clearer-audit,clearer-map,clearer-rules,clearer-adhd,token-economy,
-    code-minimalism,debugging,conselho-seniores,learned-lesson}/   # 15 skills
+    code-minimalism,debugging,conselho-seniores,learned-lesson,
+    clearer-orchestration}/                                          # 16 skills
   commands/{clearer.md,token-report.md}
   hooks/{safety-gate.py (adapter fino),vendor/ceh/ (motor CEH v2.1.3)}
   scripts/{canonical-diff.sh,ceh-help.sh,compress-output.sh,conselho-seniores.sh,
     detect-project.sh,diff-audit.sh,doc-audit.py,doc-audit.sh,evidence-report.sh,
     evidence_report.py,git_inspect.py,heartbeat.sh,preflight.sh,setup-branches.sh,
-    task-monitor.sh,telemetry_log.py,telemetry_report.py,test-runner.sh,
-    token-budget.py}                                                 # 19 arquivos
+    route_classify.py,task-monitor.sh,telemetry_log.py,telemetry_report.py,
+    test-runner.sh,token-budget.py}                                  # 20 arquivos
   tests/{run-all-tests.sh + 8 suítes de contrato/regressão}
 profiles/muse-ceh/              # dispatcher pessoal v0.2.1 (skill + comando + teste, sem hook)
 docs/CREATE-PROFILE.md        # guia: criar um profile harness do zero
@@ -151,7 +152,7 @@ evidence-backed response contract, and token economy — installable in any proj
 | `debugging` addon (5 blocking gates, lesson-ready report) | opt-in |
 | `safety-gate` hook (`PreToolUse`, binding verdict) | enabled |
 | Vendored CEH v2.1.3 engine (`hooks/vendor/ceh/`, ref `550848a`, sha in `VENDOR.md`) | enabled |
-| 15 skills (incl. opt-in `clearer-bugfix`, `conselho-seniores`) | enabled |
+| 16 skills (incl. opt-in `clearer-bugfix`, `conselho-seniores`, `clearer-orchestration`) | enabled |
 | Profile suite 9/9 + smoke-eval 16/16 (`tests/run-all-tests.sh`) | enabled |
 | Personal `muse-ceh` v0.2.1 profile (dispatcher, no own hook) | enabled |
 | Pre-Push CI Gate (zero tolerance + Flight Certificate) | enabled |
@@ -163,8 +164,8 @@ evidence-backed response contract, and token economy — installable in any proj
 
 ### Layout
 
-Same tree as above: `profiles/clearer-muse/` (canonical source, 15 skills,
-19 script files, 9-suite `tests/`), `profiles/muse-ceh/` (personal dispatcher
+Same tree as above: `profiles/clearer-muse/` (canonical source, 16 skills,
+20 script files, 9-suite `tests/`), `profiles/muse-ceh/` (personal dispatcher
 v0.2.1), `docs/`, `templates/mcp.json`, `adr/001–005`, `evals/` (16 asserts),
 `img/CLEARER-MUSE.jpg`, `HANDOFF.md`, `install.sh`, `LICENSE` (MIT).
 

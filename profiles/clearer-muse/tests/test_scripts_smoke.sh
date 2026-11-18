@@ -220,6 +220,27 @@ if [[ "$RCGI" -eq 0 && "$RCGIB" -ne 0 ]] \
   ok "smoke-git-inspect"
 else bad "smoke-git-inspect" "rc=$RCGI ruim=$RCGIB out=[$(echo "$OUTGI" | head -c 200)]"; fi
 
+# --- Etapa4 F3: classificador shadow (HIGH->T4, LOW nunca T4, config ruim=2) ---
+ORC="$SCR/route_classify.py"
+outhigh="$(python3 "$ORC" --task "alterar autenticacao e sessao em producao" 2>&1)"
+outlow="$(python3 "$ORC" --task "corrigir typo em um comentario" 2>&1)"
+outmed="$(python3 "$ORC" --task "adicionar cache com ttl a consulta frequente" 2>&1)"
+python3 "$ORC" --config /nao/existe.json --task "qualquer" >/dev/null 2>&1; RCBADCFG=$?
+if printf '%s' "$outhigh" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['classe']=='HIGH' and d['tier']=='T4' and d['modo']=='shadow'" 2>/dev/null \
+   && printf '%s' "$outlow" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['classe']=='LOW' and d['tier'] in ('T0','T1')" 2>/dev/null \
+   && printf '%s' "$outmed" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['classe']=='MEDIUM' and d['tier']=='T3'" 2>/dev/null \
+   && [[ "$RCBADCFG" -eq 2 ]]; then
+  ok "smoke-route-classify"
+else bad "smoke-route-classify" "high=[$outhigh] low=[$outlow] med=[$outmed] badcfg=$RCBADCFG"; fi
+
+# --- Etapa4 F3: shadow registra na telemetria sem decidir (decision=shadow) ---
+TSH="$(mktemp -d)"
+if python3 "$ORC" --task "migrar tabela de pagamentos em producao" --telemetry "$TSH/ev.jsonl" >/dev/null 2>&1 \
+   && python3 -c "import json,sys; e=json.loads(open(sys.argv[1]).readline()); assert e['decision']=='shadow' and e['rule']=='T4' and e['tool']=='route_classify'" "$TSH/ev.jsonl" 2>/dev/null; then
+  ok "smoke-route-shadow-telemetry"
+else bad "smoke-route-shadow-telemetry" "evento shadow ausente/inválido"; fi
+rm -rf "$TSH"
+
 echo "---"
 echo "SCRIPTS-SMOKE: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
 [[ "$FAIL" -eq 0 ]]
