@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | **EXECUTADO** — F-doc→F9 com commit atômico por fase; release v0.12.0 ativada localmente. Push/promoção aguardam pedido explícito de publicação (D1) |
+| Status | **PUBLICADO** — F-doc→F9 + promoção `dev`→`main` por FF até `b4ef665` em 2026-11-18, CI verde nas duas branches (runs 44389776562/44389963878); este registro de publicação entra na `dev` em commit posterior |
 | Origem do plano | Sessão 2026-11-17 (`01a1e958…`), workflow 4 repos + plano D1–D6/F0–F9; recuperado do log Muse após perda do checkout (kernel WSL) e consolidado com a classificação arquivo a arquivo de 2026-11-18 |
 | Fontes (read-only) | `antigravity-clearer-engineering-harness` v2.3.1 (`4db20b7`), `antigravity-harness-enhancements` v3.5.0 (`85351c6`) + pin `7318f93` da branch `dev-security-opt-01-p01` (`abc63dc`), `benchmark-antigravity` v0.13.0 (`2fe6cf1`) |
 | Último marco absorvido | Etapa 3: CEH v2.1.3 + Ponytail v5 (`550848a`) → v0.11.0 (`e3662d0`), **não publicado** (remoto em `ef13379`) |

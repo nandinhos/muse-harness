@@ -158,3 +158,12 @@ pedido explícito de publicação). Baseline OBSERVED: 9/9 + evals 16/16.
 Nota de processo: a análise desta etapa nasceu na sessão de 2026-11-17 e
 foi recuperada do log Muse após a perda do checkout — por isso a F-doc
 versiona o plano antes de qualquer código.
+
+**Publicada em 2026-11-18** (OBSERVED): promoção clássica `dev` → `main`
+por fast-forward até `b4ef665` (16 commits: Etapas 3+4), push liberado
+pelo Pre-Push CI Gate com Certificado de Voo do HEAD, CI verde nas duas
+branches (runs 44389776562 na `dev` e 44389963878 na `main`, ambas
+`success` em `b4ef665`). Veredito pós-promoção: `VERIFICADO` calculado.
+Este parágrafo entra em commit docs posterior na `dev` (sem nova promoção
+neste ciclo). Pendente deliberado: A/B com modelos vivos do roteador
+shadow (critério pré-registrado em `evals/orchestration/CRITERIA.md`).
