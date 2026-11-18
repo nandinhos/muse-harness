@@ -141,7 +141,22 @@ Delta `550848a..4db20b7`: 32 commits, 30 arquivos (+2.872/−274), medido por
 | F1 | `8bc224f` | corpus 36 (12/12/12) + critério pré-registrado |
 | F2 | `51c6216` | smoke 25 asserts (+4); máscara sondada com variantes não enumeradas (0 vazamentos) |
 | F3 | `a9e2a7c` | smoke 27 (+2); manifesto válido 16 skills; sonda do corpus 35/36, HIGH 12/12 (M08 registrado, sem ajuste de critério) |
-| F4 | _(este commit)_ | safety 16 (+1 fail-closed); achados abaixo |
+| F4 | `4912ddb` | safety 16 (+1 fail-closed); achados abaixo |
+| F5 | _(este commit)_ | ceh-core 19 (+C16a/b árvore idêntica, +C17 `git -C`); C13 sha `eed5a051…`; evals F11 corrigida p/ árvore distinta; timeouts em sondas docker |
+
+### F5 — Divergências deliberadas vs. upstream (registradas)
+
+- **Fast-path de renovação de certificado NÃO portado:** o `test-runner`
+  oficial passou a renovar o cert sem rodar testes quando a árvore é
+  idêntica. Aqui o gate vendorizado já aceita o cert antigo p/ árvore
+  idêntica (`is_tree_identical`), então renovar só falsificaria o campo
+  `command`/`timestamp` de uma execução que não houve. Reavaliar apenas se
+  algum consumidor exigir `cert == HEAD`, e aí com campo `promoted_from`
+  explícito — nunca como corrida fingida.
+- **Auditoria `muse.py` × `git -C`: sem lacuna.** Sonda comportamental
+  (promovida a caso C17): `git -C <repoB-sem-cert> push` a partir de repo
+  com cert válido é negado — o motor resolve o repo alvo do `-C`, não o
+  cwd do payload. O fix análogo da v2.3.1 era do adapter Antigravity.
 
 ### F4 — Auditoria do pin `7318f93` (OBSERVED, corpo lido)
 

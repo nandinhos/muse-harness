@@ -48,7 +48,7 @@ de resposta com evidências e economia de tokens — instalável em qualquer pro
 | Addon `code-minimalism` (Escada Ponytail v5, marcação `shortcut:`) | opt-in |
 | Addon `debugging` (5 gates bloqueantes, relatório lesson-ready) | opt-in |
 | Hook `safety-gate` (`PreToolUse`, veredito vinculante) | ativo |
-| Motor CEH v2.1.3 vendorizado (`hooks/vendor/ceh/`, ref `550848a`, sha em `VENDOR.md`) | ativo |
+| Motor CEH v2.3.1 vendorizado (`hooks/vendor/ceh/`, ref `4db20b7`, sha em `VENDOR.md`) | ativo |
 | 16 skills (incl. `clearer-bugfix`, `conselho-seniores`, `clearer-orchestration` opt-in) | ativo |
 | Suíte do profile 9/9 + smoke-eval 16/16 (`tests/run-all-tests.sh`) | ativo |
 | Profile pessoal `muse-ceh` v0.2.1 (dispatcher, sem hook próprio) | ativo |
@@ -68,7 +68,7 @@ profiles/clearer-muse/        # cópia canônica: skills, commands, hooks, scrip
     code-minimalism,debugging,conselho-seniores,learned-lesson,
     clearer-orchestration}/                                          # 16 skills
   commands/{clearer.md,token-report.md}
-  hooks/{safety-gate.py (adapter fino),vendor/ceh/ (motor CEH v2.1.3)}
+  hooks/{safety-gate.py (adapter fino),vendor/ceh/ (motor CEH v2.3.1)}
   scripts/{canonical-diff.sh,ceh-help.sh,compress-output.sh,conselho-seniores.sh,
     detect-project.sh,diff-audit.sh,doc-audit.py,doc-audit.sh,evidence-report.sh,
     evidence_report.py,git_inspect.py,heartbeat.sh,preflight.sh,setup-branches.sh,
@@ -151,7 +151,7 @@ evidence-backed response contract, and token economy — installable in any proj
 | `code-minimalism` addon (Ponytail v5 ladder, `shortcut:` marks) | opt-in |
 | `debugging` addon (5 blocking gates, lesson-ready report) | opt-in |
 | `safety-gate` hook (`PreToolUse`, binding verdict) | enabled |
-| Vendored CEH v2.1.3 engine (`hooks/vendor/ceh/`, ref `550848a`, sha in `VENDOR.md`) | enabled |
+| Vendored CEH v2.3.1 engine (`hooks/vendor/ceh/`, ref `4db20b7`, sha in `VENDOR.md`) | enabled |
 | 16 skills (incl. opt-in `clearer-bugfix`, `conselho-seniores`, `clearer-orchestration`) | enabled |
 | Profile suite 9/9 + smoke-eval 16/16 (`tests/run-all-tests.sh`) | enabled |
 | Personal `muse-ceh` v0.2.1 profile (dispatcher, no own hook) | enabled |

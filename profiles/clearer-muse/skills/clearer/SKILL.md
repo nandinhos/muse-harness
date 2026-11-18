@@ -6,8 +6,8 @@ description: Dispatcher do CLEARER Engineering Harness no Muse. Classifica ambie
 # Clearer Dispatcher (Muse)
 
 Ponto de entrada do **CLEARER Engineering Harness (CEH)** adaptado ao Muse.
-Portado de `antigravity-clearer-engineering-harness` (CEH **v2.1.3 + Ponytail v5**,
-motor vendored ref `550848a`): mesmo protocolo, sem dependência do runtime
+Portado de `antigravity-clearer-engineering-harness` (CEH **v2.3.1 + Ponytail v5**,
+motor vendored ref `4db20b7`): mesmo protocolo, sem dependência do runtime
 Antigravity (`agy`, `~/.gemini`, hooks proprietários).
 
 ## 1. Identificação de ambiente (obrigatória antes de mutar)

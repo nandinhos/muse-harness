@@ -5,7 +5,7 @@ description: Regras nucleares do CEH no Muse (ambientes, CI gate, branches, Pony
 
 # CLEARER Rules (Muse)
 
-Fonte consolidada das regras do harness. O dispatcher resume; aqui está o normativo. Origem: CEH **v2.1.3 + Ponytail v5** (`clearer-engineering/rules/`: AGENTS, core, evidence, testing, git-safety, security, coding-policy). O `safety-gate` deste profile executa o motor `ceh_core` + `adapters` vendored (`hooks/vendor/ceh/`, ref `550848a`) — o veredito dele é o normativo, não esta página.
+Fonte consolidada das regras do harness. O dispatcher resume; aqui está o normativo. Origem: CEH **v2.3.1 + Ponytail v5** (`clearer-engineering/rules/`: AGENTS, core, evidence, testing, git-safety, security, coding-policy). O `safety-gate` deste profile executa o motor `ceh_core` + `adapters` vendored (`hooks/vendor/ceh/`, ref `4db20b7`) — o veredito dele é o normativo, não esta página.
 
 ## 1. Ambientes e rigor
 
@@ -60,11 +60,17 @@ Pare e transfira ao humano apenas ante: (1) ambiguidade real excludente, (2) `WA
 - Recurso externo (banco, fila, APIs) só conecta no primeiro uso operacional, nunca durante import, build de módulos ou suíte de testes unitários sem I/O.
 - Relatórios com credenciais, auditorias sensíveis ou inventários de vulnerabilidade exigem chmod 0600 explícito pós-escrita, verificado fisicamente com stat; umask de criação sozinho não constitui evidência.
 
-## 8. Veredito calculado (Invariante 6)
+## 8. Confinamento de escopo e subprocessos (regra 15, v2.2.0 — Zero-Zombie)
+
+- Proibida varredura recursiva aberta a partir de raiz/home (`find /`, `find ~`, `grep -r /`): toda busca tem escopo nomeado (subdiretório do projeto) e profundidade limitada; no Muse, prefira `muse.search` (delimitada por construção) a varredura shell.
+- Subprocesso lançado por script do harness tem timeout determinístico (≤30s salvo justificativa nominada) e, ao estourar, encerramento em árvore (`os.killpg` ou equivalente) — zero processo órfão/zumbi no host.
+- Inspeção repetitiva de git/histórico usa ferramenta declarativa parametrizada (`scripts/git_inspect.py`, saída JSON) em vez de script ad-hoc gerado na sessão: menos tokens de saída, mesmo fato.
+
+## 9. Veredito calculado (Invariante 6)
 
 **O código detém o veredito**: RESULT e CONFIDENCE do Response Contract são calculados por `scripts/evidence-report.sh` (git + certificados `.ceh/` + provas com sha256), nunca declarados pelo agente. Afirmação sem prova versionada e intacta é `PARTIALLY_SUPPORTED`/`UNSUPPORTED`, não fato. Proibido afirmar "testado", "corrigido" ou "sem regressão" sem comando + exit code + saída registrados; `evidence-report.sh --strict` barra veredito não-`VERIFICADO`.
 
-## 9. Commits e comandos de shell
+## 10. Commits e comandos de shell
 
 - **Mensagem de commit** (de `git-safety`): pt-BR sempre; 1ª linha `<prefixo> (<escopo>): <descrição objetiva>` (≤72 caracteres; prefixos `feat|fix|refactor|docs|test|style|perf|chore`); sem emojis e sem rodapé de co-autoria/sessão (`Co-Authored-By` e afins proibidos).
 - **Proibido inline multi-linha**: comando composto (heredoc, script embutido, quoting aninhado) vai em arquivo `.sh`/`.py` executável, nunca colado na chamada de shell. Justificativa Muse (OBSERVED): o `safety-gate` reprova quoting complexo fail-closed (`${...}` e subshell em aspas), e arquivo nomeado é reexecutável/auditável.

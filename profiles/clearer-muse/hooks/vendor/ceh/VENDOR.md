@@ -9,9 +9,9 @@
 | Item | Valor |
 |---|---|
 | Origem | `clearer-engineering/scripts/{ceh_core/,adapters/,safety-gate.py,hook_context.py}` |
-| Ref validada | `550848a` (`main`, CEH **v2.1.3** + Ponytail v5, Etapa 3; anterior: `76eaf76`, v2.1.2) |
-| Extração | `git archive 550848a <paths>` (sem `__pycache__`) |
-| sha256 do bundle (23 arquivos `.py`) | `dc75ccb9d5126bcded82b0333bd6981ee32faa572ea54fd899b8dc9ab8a97e39` |
+| Ref validada | `4db20b7` (`main`, CEH **v2.3.1**, Etapa 4/F5; anteriores: `550848a` v2.1.3, `76eaf76` v2.1.2) |
+| Extração | `git archive 4db20b7 <paths>` (sem `__pycache__`); drift vs. `550848a` = só `ceh_core/push.py` (+`is_tree_identical` no Pre-Push Gate) e `adapters/antigravity.py` (cwd/`git -C`, inerte no Muse) |
+| sha256 do bundle (23 arquivos `.py`) | `eed5a05162b5bcdc7516c0648704d69c3822c1ff533d3d5f1eb90b7b4e07c6f7` |
 | Verificação (reproduzível; cobrada em `C13`) | `(cd hooks/vendor/ceh && find . -type f -name '*.py' \| LC_ALL=C sort \| xargs sha256sum \| sha256sum)` |
 | Consumidor | `../safety-gate.py` (adapter fino do host Muse sobre `adapters/muse.py`) |
 

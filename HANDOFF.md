@@ -18,7 +18,7 @@ topologia clássica), com tudo publicado.
 
 | Item | Estado |
 |---|---|
-| `profiles/clearer-muse/` | canônico v0.11.0 (+Etapa 4 em curso): 16 skills, 2 commands, hook `safety-gate` (adapter sobre o motor CEH v2.1.3 vendorizado em `hooks/vendor/ceh/`, ref `550848a`), 20 scripts, suíte `tests/` 9/9 |
+| `profiles/clearer-muse/` | canônico v0.11.0 (+Etapa 4 em curso): 16 skills, 2 commands, hook `safety-gate` (adapter sobre o motor CEH v2.3.1 vendorizado em `hooks/vendor/ceh/`, ref `4db20b7`), 20 scripts, suíte `tests/` 9/9 |
 | `profiles/muse-ceh/` | dispatcher pessoal v0.2.1 (skill + comando + teste, `hooks=0`; ver `HANDOFF-muse-ceh.md`) |
 | `docs/CREATE-PROFILE.md` | guia de criação de profile (anatomia, 7 passos, segredos, checklist, riscos) |
 | `templates/mcp.json` | base MCP só com `context7` + `${CONTEXT7_API_KEY}` (sem segredo) |

@@ -10,6 +10,13 @@
 #   precisa descrever o commit; fiel ao runner CEH v1.3.1).
 # - Copia a saída bruta p/ `.ceh/last-ci-run.log` (D3), citada pelo evidence-report.
 set -u
+# Timeout portavel p/ sondas (Etapa4 F5, regra 15: subprocesso sem teto = hang).
+_run_with_timeout() {
+  local secs="$1"; shift
+  if command -v timeout >/dev/null 2>&1; then timeout "$secs" "$@";
+  elif command -v gtimeout >/dev/null 2>&1; then gtimeout "$secs" "$@";
+  else "$@"; fi
+}
 echo "=== [CEH test-runner] $(date -u +%Y-%m-%dT%H:%M:%SZ) | $PWD ==="
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 detect_cmd() {
@@ -45,9 +52,9 @@ else echo "STATUS: NOT RUN (nenhum runner detectado)"; exit 3; fi
 # --- Runtime adapter: Docker ativo despacha; parado degrada com aviso ---
 PRE_DISPATCH_CMD="$CMD"
 ACTIVE_SERVICES=""
-if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+if command -v docker >/dev/null 2>&1 && _run_with_timeout 2 docker info >/dev/null 2>&1; then
   if [[ -f docker-compose.yml || -f docker-compose.yaml || -f compose.yaml || -f compose.yml ]]; then
-    ACTIVE_SERVICES=$(docker compose ps --services --filter "status=running" 2>/dev/null || true)
+    ACTIVE_SERVICES=$(_run_with_timeout 3 docker compose ps --services --filter "status=running" 2>/dev/null || true)
   fi
 fi
 if [[ -n "$ACTIVE_SERVICES" ]]; then

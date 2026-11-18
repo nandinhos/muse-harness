@@ -2,6 +2,13 @@
 # detect-project.sh — Detector de stack e ambiente (porte de clearer-engineering/scripts/detect-project.sh).
 # Uso: bash scripts/detect-project.sh [dir]   (exit sempre 0; só leitura)
 set -u
+# Timeout portavel p/ sondas (Etapa4 F5, regra 15: subprocesso sem teto = hang).
+_run_with_timeout() {
+  local secs="$1"; shift
+  if command -v timeout >/dev/null 2>&1; then timeout "$secs" "$@";
+  elif command -v gtimeout >/dev/null 2>&1; then gtimeout "$secs" "$@";
+  else "$@"; fi
+}
 TARGET="${1:-$(pwd)}"
 cd "$TARGET" || { echo "ERRO: dir inexistente: $TARGET" >&2; exit 2; }
 
@@ -32,10 +39,10 @@ echo "tests-dir: $([[ -d tests ]] && echo yes || echo no)"
 # --- 7. Runtime & CI Strategy Awareness (RUNTIME_MODE + comandos canonicos do CI) ---
 IN_CONTAINER=0; DOCKER_UP=0; ACTIVE_SVC=""
 [[ -f /.dockerenv ]] && IN_CONTAINER=1
-if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+if command -v docker >/dev/null 2>&1 && _run_with_timeout 2 docker info >/dev/null 2>&1; then
   DOCKER_UP=1
   if [[ -f docker-compose.yml || -f docker-compose.yaml || -f compose.yaml || -f compose.yml ]]; then
-    ACTIVE_SVC=$(docker compose ps --services --filter "status=running" 2>/dev/null || true)
+    ACTIVE_SVC=$(_run_with_timeout 3 docker compose ps --services --filter "status=running" 2>/dev/null || true)
   fi
 fi
 if [[ $IN_CONTAINER -eq 1 ]]; then RUNTIME_MODE="IN_CONTAINER";

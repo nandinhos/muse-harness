@@ -124,8 +124,12 @@ printf '{"commit_hash": "%s", "timestamp": "2026-01-01T00:00:00Z", "command": ".
 F10OUT="$(cd "$TMPREP" && env -i PATH="$PATH" python3 "$HOOK" "git push origin dev" 2>&1)"; F10RC=$?
 if [[ "$F10OUT" == *"CEH-SAFETY ALLOW"* && "$F10RC" -eq 0 ]]; then PASS=$((PASS+1)); echo "PASS F10-allow-push-com-cert";
 else FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST F10-allow-push-com-cert"; echo "FAIL F10-allow-push-com-cert :: out=[$F10OUT] rc=$F10RC"; fi
-# F11: certificado de outro commit (obsoleto) = DENY
-git -C "$TMPREP" -c user.email=t@t -c user.name=t commit -q --allow-empty -m two 2>/dev/null
+# F11: certificado de outro commit com ARVORE DISTINTA (obsoleto) = DENY.
+# Etapa4/v2.3.1: commit vazio (arvore identica) agora e ALLOW legitimo por
+# is_tree_identical (coberto em C16a/C16b); obsoleto de verdade muda a arvore.
+echo obsoleto > "$TMPREP/obsoleto.txt"
+git -C "$TMPREP" add obsoleto.txt 2>/dev/null
+git -C "$TMPREP" -c user.email=t@t -c user.name=t commit -qm two 2>/dev/null
 git -C "$TMPREP" branch -f dev 2>/dev/null
 F11OUT="$(cd "$TMPREP" && env -i PATH="$PATH" python3 "$HOOK" "git push origin dev" 2>&1)"; F11RC=$?
 if [[ "$F11OUT" == *"CEH-SAFETY DENY"* && "$F11OUT" == *"PRE-PUSH CI GATE"* && "$F11RC" -eq 0 ]]; then PASS=$((PASS+1)); echo "PASS F11-deny-cert-obsoleto";

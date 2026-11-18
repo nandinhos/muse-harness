@@ -105,6 +105,41 @@ C15OUT="$(env -i PATH="$PATH" python3 "$HOOK" '{"event":"PreToolUse","tool_name"
 if [[ "$C15OUT" == *'CEH-SAFETY DENY'* && "$C15OUT" == *'CATASTROPHIC BLOCK'* && "$C15RC" -eq 0 ]]; then ok "C15-argv-json-payload-deny";
 else bad "C15-argv-json-payload-deny" "rc=$C15RC out=[$C15OUT]"; fi
 
+# --- C16 (Etapa4 F5): cert de árvore idêntica libera; árvore distinta nega (v2.3.1) ---
+TMPC16=$(mktemp -d)
+git -C "$TMPC16" init -q -b dev 2>/dev/null
+git -C "$TMPC16" config user.email t@t; git -C "$TMPC16" config user.name t
+mkdir -p "$TMPC16/.github/workflows" "$TMPC16/.ceh"
+printf 'name: ci\non: [push]\njobs:\n  t:\n    runs-on: ubuntu-latest\n    steps:\n      - run: ./vendor/bin/pest\n' > "$TMPC16/.github/workflows/ci.yml"
+echo base > "$TMPC16/f.txt"; git -C "$TMPC16" add .; git -C "$TMPC16" commit -qm base
+CERT_HASH="$(git -C "$TMPC16" rev-parse HEAD)"
+printf '{"commit_hash":"%s","status":"PASS","exit_code":0,"canonical_verified":true,"command":"suite"}' "$CERT_HASH" > "$TMPC16/.ceh/last-ci-run.json"
+git -C "$TMPC16" commit -q --allow-empty -m "docs: mesma arvore"
+C16OUT="$(cd "$TMPC16" && env -i PATH="$PATH" python3 "$HOOK" --check "git push origin dev" 2>&1)"; C16RC=$?
+if [[ "$C16OUT" == *'"decision": "allow"'* && "$C16RC" -eq 0 ]]; then ok "C16a-push-arvore-identica-allow";
+else bad "C16a-push-arvore-identica-allow" "rc=$C16RC out=[$(echo "$C16OUT" | head -c 300)]"; fi
+echo mudou >> "$TMPC16/f.txt"; git -C "$TMPC16" add .; git -C "$TMPC16" commit -qm "muda arvore"
+C16BOUT="$(cd "$TMPC16" && env -i PATH="$PATH" python3 "$HOOK" --check "git push origin dev" 2>&1)"; C16BRC=$?
+if [[ "$C16BOUT" == *'"decision": "deny"'* && "$C16BOUT" == *'PRE-PUSH CI GATE'* && "$C16BRC" -eq 2 ]]; then ok "C16b-push-arvore-distinta-deny";
+else bad "C16b-push-arvore-distinta-deny" "rc=$C16BRC out=[$(echo "$C16BOUT" | head -c 300)]"; fi
+rm -rf "$TMPC16"
+
+# --- C17 (Etapa4 F5, auditoria muse.py): git -C resolve o repo alvo, não o cwd ---
+TMPA17=$(mktemp -d); TMPB17=$(mktemp -d)
+for R in "$TMPA17" "$TMPB17"; do
+  git -C "$R" init -q -b dev 2>/dev/null
+  git -C "$R" config user.email t@t; git -C "$R" config user.name t
+  mkdir -p "$R/.github/workflows"
+  printf 'name: ci\non: [push]\njobs:\n  t:\n    runs-on: ubuntu-latest\n    steps:\n      - run: ./vendor/bin/pest\n' > "$R/.github/workflows/ci.yml"
+  echo base > "$R/f.txt"; git -C "$R" add .; git -C "$R" commit -qm base
+done
+mkdir -p "$TMPA17/.ceh"
+printf '{"commit_hash":"%s","status":"PASS","exit_code":0,"canonical_verified":true,"command":"suite"}' "$(git -C "$TMPA17" rev-parse HEAD)" > "$TMPA17/.ceh/last-ci-run.json"
+C17OUT="$(cd "$TMPA17" && env -i PATH="$PATH" python3 "$HOOK" --check "git -C $TMPB17 push origin dev" 2>&1)"; C17RC=$?
+if [[ "$C17OUT" == *'"decision": "deny"'* && "$C17OUT" == *'PRE-PUSH CI GATE'* && "$C17RC" -eq 2 ]]; then ok "C17-gitc-alvo-sem-cert-deny";
+else bad "C17-gitc-alvo-sem-cert-deny" "rc=$C17RC out=[$(echo "$C17OUT" | head -c 300)]"; fi
+rm -rf "$TMPA17" "$TMPB17"
+
 # --- C13: bundle vendored íntegro (sha reproduzível pinado em VENDOR.md) ---
 VENDOR_DIR="$ROOT/profiles/clearer-muse/hooks/vendor/ceh"
 C13SHA="$(cd "$VENDOR_DIR" && find . -type f -name '*.py' | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1)"
