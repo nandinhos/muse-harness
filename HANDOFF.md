@@ -145,3 +145,16 @@ finding em 4 partes + callers em `clearer-review`, Heurística 12 no
 dispatcher (`a60e81b`). Fase 5 é este release; a Fase 6 (certificado,
 evidence strict e `plugins update` dos dois profiles) fecha a etapa —
 push/promoção seguem exigindo `go` separado.
+
+## 11. Etapa 4 — Abstração v2.3.1 + Orquestração (em execução)
+
+Plano e registro em `HANDOFF-ETAPA4-ABSTRACAO-V231-ORQUESTRACAO.md`:
+abstração em 3 camadas (agnóstica / adapter Muse / Antigravity-only) do
+pack CEH v2.3.1 + enhancements v3.5.0 (pin `7318f93`) + benchmark v0.13.0,
+decisões D1–D6, fases F-doc→F9 com commit atômico e suíte entre elas.
+Estado ao abrir a etapa: local `e3662d0` limpo, 5 commits à frente do
+remoto (`ef13379`) — a Etapa 3 segue **não publicada** (D1: push exige
+pedido explícito de publicação). Baseline OBSERVED: 9/9 + evals 16/16.
+Nota de processo: a análise desta etapa nasceu na sessão de 2026-11-17 e
+foi recuperada do log Muse após a perda do checkout — por isso a F-doc
+versiona o plano antes de qualquer código.
