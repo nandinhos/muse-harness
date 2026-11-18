@@ -18,11 +18,11 @@ topologia clássica), com tudo publicado.
 
 | Item | Estado |
 |---|---|
-| `profiles/clearer-muse/` | canônico v0.11.0 (+Etapa 4 em curso): 16 skills, 2 commands, hook `safety-gate` (adapter sobre o motor CEH v2.3.1 vendorizado em `hooks/vendor/ceh/`, ref `4db20b7`), 22 scripts, suíte `tests/` 9/9 |
+| `profiles/clearer-muse/` | canônico v0.12.0 (Etapa 4): 16 skills, 2 commands, hook `safety-gate` (adapter sobre o motor CEH v2.3.1 vendorizado em `hooks/vendor/ceh/`, ref `4db20b7`), 22 scripts, suíte `tests/` 9/9 + E2E `evals/orchestration/` 6/6 |
 | `profiles/muse-ceh/` | dispatcher pessoal v0.2.1 (skill + comando + teste, `hooks=0`; ver `HANDOFF-muse-ceh.md`) |
 | `docs/CREATE-PROFILE.md` | guia de criação de profile (anatomia, 7 passos, segredos, checklist, riscos) |
 | `templates/mcp.json` | base MCP só com `context7` + `${CONTEXT7_API_KEY}` (sem segredo) |
-| `adr/001…005` | Context7, lições, minimalismo (ponytail), hook órfão no update, governança CEH |
+| `adr/001…007` | Context7, lições, minimalismo (ponytail), hook órfão no update, governança CEH, isenção declaration-only, orquestração/telemetria shadow |
 | `LICENSE` / CI | MIT; GitHub Actions em `dev`+`main` (sintaxe + evals 16/16 + suíte 9/9) |
 | Segredos | varredura limpa em todo o repo; chave real só em `~/.bashrc` do host (600) |
 | `events` | sem `plugins/clearer-muse/`; `installed.json` reapontado para cá (ver §5) |
@@ -146,7 +146,7 @@ dispatcher (`a60e81b`). Fase 5 é este release; a Fase 6 (certificado,
 evidence strict e `plugins update` dos dois profiles) fecha a etapa —
 push/promoção seguem exigindo `go` separado.
 
-## 11. Etapa 4 — Abstração v2.3.1 + Orquestração (em execução)
+## 11. Etapa 4 — Abstração v2.3.1 + Orquestração (release v0.12.0)
 
 Plano e registro em `HANDOFF-ETAPA4-ABSTRACAO-V231-ORQUESTRACAO.md`:
 abstração em 3 camadas (agnóstica / adapter Muse / Antigravity-only) do

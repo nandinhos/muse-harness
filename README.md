@@ -39,7 +39,7 @@ de resposta com evidências e economia de tokens — instalável em qualquer pro
 | 6 | Verificação independente | Testes do repo + `diff-audit` do próprio diff antes de entregar |
 | 7 | Melhoria contínua como rotina | Falhas viram gates permanentes (ADRs, hooks, regressões) |
 
-### O profile `clearer-muse` v0.11.0
+### O profile `clearer-muse` v0.12.0
 
 | Capacidade | Estado |
 |------------|--------|
@@ -78,7 +78,7 @@ profiles/clearer-muse/        # cópia canônica: skills, commands, hooks, scrip
 profiles/muse-ceh/              # dispatcher pessoal v0.2.1 (skill + comando + teste, sem hook)
 docs/CREATE-PROFILE.md        # guia: criar um profile harness do zero
 templates/mcp.json            # base MCP (só `${VAR}`, sem segredos)
-adr/001…005                   # decisões: Context7, lições, minimalismo, hook órfão, governança CEH
+adr/001…007                   # decisões: Context7, lições, minimalismo, hook órfão, governança CEH, isenção, orquestração
 evals/                        # smoke-eval do safety-gate (16 asserts, CRITERIA.md pré-registrado)
 img/CLEARER-MUSE.jpg          # filosofia em uma imagem
 HANDOFF.md                    # handoff canônico (os HANDOFF-*.md são registros históricos)
@@ -142,7 +142,7 @@ evidence-backed response contract, and token economy — installable in any proj
 | 6 | Independent verification | Repo tests + self `diff-audit` before delivery |
 | 7 | Continuous improvement as routine | Failures become permanent gates (ADRs, hooks, regressions) |
 
-### The `clearer-muse` profile v0.11.0
+### The `clearer-muse` profile v0.12.0
 
 | Capability | Status |
 |------------|--------|
@@ -166,7 +166,7 @@ evidence-backed response contract, and token economy — installable in any proj
 
 Same tree as above: `profiles/clearer-muse/` (canonical source, 16 skills,
 22 script files, 9-suite `tests/`), `profiles/muse-ceh/` (personal dispatcher
-v0.2.1), `docs/`, `templates/mcp.json`, `adr/001–005`, `evals/` (16 asserts),
+v0.2.1), `docs/`, `templates/mcp.json`, `adr/001–007`, `evals/` (16 asserts + orchestration E2E),
 `img/CLEARER-MUSE.jpg`, `HANDOFF.md`, `install.sh`, `LICENSE` (MIT).
 
 ### Rigor per environment
