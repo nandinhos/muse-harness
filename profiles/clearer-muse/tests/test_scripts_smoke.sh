@@ -383,6 +383,40 @@ if [[ "$RCUN" -eq 0 && ! -s "$STUB_LOG" ]] && grep -q "BEGIN CLEARER-MUSE" "$RCI
 else bad "smoke-uninstall-no-consent-preserva" "rc=$RCUN log=[$(cat "$STUB_LOG")] out=[$(echo "$OUTUN" | tail -c 200)]"; fi
 rm -rf "$TINST" "$BINST"
 
+# --- Guarda de contexto (incidente 2026-11-18): custo real e context-guard ---
+TCOST="$(mktemp -d)"
+python3 - <<'PYEOF' "$TCOST/small.jsonl" "$TCOST/big.jsonl"
+import json, sys
+def ev(model, inp, cached, out):
+    return json.dumps({"payload_type": "runtime.session", "payload": {"event": {
+        "kind": "model_completed", "model": model,
+        "usage": {"input_tokens": inp, "cached_tokens": cached,
+                  "output_tokens": out, "reasoning_tokens": 0}}}})
+open(sys.argv[1], "w").write(ev("muse-spark-1.3", 1000, 800, 50) + "\n" + ev("muse-spark-1.3", 1200, 1000, 60) + "\n")
+open(sys.argv[2], "w").write(ev("muse-wonder-full-1.0", 400000, 390000, 500) + "\n")
+PYEOF
+OUTCOST="$(python3 "$SCR/session_cost.py" "$TCOST/small.jsonl" 2>&1)"; RCCOST=$?
+OUTBIG="$(python3 "$SCR/context-guard.py" --session "$TCOST/big.jsonl" 2>&1)"; RCBIG=$?
+OUTOKG="$(python3 "$SCR/context-guard.py" --session "$TCOST/small.jsonl" 2>&1)"; RCOKG=$?
+python3 "$SCR/session_cost.py" "$TCOST/nao-existe.jsonl" >/dev/null 2>&1; RCMISS2=$?
+python3 "$SCR/context-guard.py" --session "$TCOST/nao-existe.jsonl" >/dev/null 2>&1; RCMISSG=$?
+# real_cost pequeno = (1000-800+50)+(1200-1000+60) = 510; bruto seria 2200+110
+if [[ "$RCCOST" -eq 0 && "$OUTCOST" == *'real_cost=510'* && "$OUTCOST" == *'input=2200'* ]]; then ok "smoke-session-cost-real";
+else bad "smoke-session-cost-real" "rc=$RCCOST out=[$(echo "$OUTCOST" | head -c 300)]"; fi
+if [[ "$RCBIG" -eq 2 && "$OUTBIG" == *'BLOCK'* && "$RCOKG" -eq 0 && "$OUTOKG" == *'OK'* ]]; then ok "smoke-context-guard-block-ok";
+else bad "smoke-context-guard-block-ok" "big=$RCBIG ok=$RCOKG out=[$OUTBIG|$OUTOKG]"; fi
+if [[ "$RCMISS2" -eq 2 && "$RCMISSG" -eq 2 ]]; then ok "smoke-cost-guard-failclosed";
+else bad "smoke-cost-guard-failclosed" "cost=$RCMISS2 guard=$RCMISSG (esperado 2/2)"; fi
+rm -rf "$TCOST"
+
+# --- compress-output: teto duro de chars + exit preservado ---
+OUTCMP="$(bash "$SCR/compress-output.sh" python3 -c "print('x'*30000)" 2>&1)"; RCCMP=$?
+CMPBYTES=$(printf '%s' "$OUTCMP" | wc -c)
+if [[ "$RCCMP" -eq 0 && "$CMPBYTES" -lt 20000 && "$OUTCMP" == *'teto 16000 chars'* ]]; then ok "smoke-compress-max-chars";
+else bad "smoke-compress-max-chars" "rc=$RCCMP bytes=$CMPBYTES"; fi
+bash "$SCR/compress-output.sh" bash -c "exit 3" >/dev/null 2>&1; RCEXIT=$?
+if [[ "$RCEXIT" -eq 3 ]]; then ok "smoke-compress-exit-preserved"; else bad "smoke-compress-exit-preserved" "rc=$RCEXIT (esperado 3)"; fi
+
 echo "---"
 echo "SCRIPTS-SMOKE: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
 [[ "$FAIL" -eq 0 ]]

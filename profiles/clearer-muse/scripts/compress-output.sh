@@ -4,10 +4,15 @@
 # Executa o comando, preserva o exit code, colapsa linhas consecutivas
 # repetidas e imprime head+tail com a contagem do omitido. Equivale ao papel
 # do RTK no CEH quando o binário `rtk` não está no PATH.
+# Teto duro de caracteres (CEH_COMPRESS_MAX_CHARS, default 16000 ≈ 4k tok,
+# teto de saída do token-economy): linhas gigantes não furam o orçamento —
+# sem teto, 80 linhas de stack/log já retinham ~250 KB no histórico
+# (incidente 2026-11-18, lane tool_result média 246 KB/prompt).
 set -u
 
 HEAD_LINES="${CEH_COMPRESS_HEAD:-40}"
 TAIL_LINES="${CEH_COMPRESS_TAIL:-40}"
+MAX_CHARS="${CEH_COMPRESS_MAX_CHARS:-16000}"
 
 if [[ $# -eq 0 ]]; then
   echo "uso: compress-output.sh <comando...>" >&2
@@ -34,5 +39,10 @@ else
   omitted=$((total - shown))
   echo "... [${omitted} linha(s) omitida(s) — reexecute sem o wrapper p/ saída bruta] ..."
   tail -n "$TAIL_LINES" "$uniq_out"
+fi | head -c "$MAX_CHARS"
+bytes_shown=$(wc -c < "$uniq_out" | tr -d ' ')
+if [[ "$bytes_shown" -gt "$MAX_CHARS" ]]; then
+  echo ""
+  echo "... [teto ${MAX_CHARS} chars atingido (${bytes_shown} chars apos uniq) — reexecute sem o wrapper p/ saída bruta] ..."
 fi
 exit "$code"

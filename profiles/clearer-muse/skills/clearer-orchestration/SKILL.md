@@ -52,6 +52,19 @@ Campos mínimos ao delegar: objetivo em 1 frase, classe/tier com sinais,
 arquivos inspecionados (`arquivo:linha`), testes que provam, riscos
 abertos. Teto de higiene do `token-economy`: 2k tokens por pack.
 
+**Anti-duplicação (incidente 2026-11-18: 20 subagentes, ~3,45M input
+bruto, maioria relendo o que o pai já tinha lido):**
+
+1. O pack lista o que já foi inspecionado; o filho **não** relê esses
+   arquivos — trabalha sobre o resumo e só abre o que falta.
+2. Investigação read-only usa o tier leve (`muse-spark-1.3`); o modelo
+   `full` fica com decisão e revisão (regra D6). Filho `full` de 1 passo
+   para listar/explicar é desperdício provado, não paralelismo.
+3. Um filho por pergunta, com a pergunta no prompt; dois filhos com a
+   mesma pergunta são um só — deduplique antes de spawnar.
+4. Sessão pai em `BLOCK` do `context-guard.py` não spawna: fecha a etapa
+   com handoff e reinicia (o custo do pai contamina a síntese).
+
 ## Receitas de workflow (planner ↔ executor)
 
 Papéis são subagentes nativos da sessão (um papel por criança, nunca

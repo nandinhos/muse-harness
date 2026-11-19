@@ -216,3 +216,20 @@ timeouts de git em `evidence_report`/`doc-audit`.
 opções/URL/file de push e “tag antiga libera branch não testada” —
 todas as variantes negam; tag antiga isolada é conteúdo certificado.
 Veredito e resíduos: ver §12.
+
+## 14. Guarda de contexto — incidente de consumo 2026-11-18 (ADR-008)
+
+Auditoria dos `session.jsonl` provou: a sessão da Etapa 4 fez 367 passos
+(39k→442k tok/passo), 98.824.410 input brutos dos quais 98% cache —
+custo novo real ~2,18M. Mitigação entregue nesta branch (suíte 9/9):
+`scripts/session_cost.py` (métrica oficial `(input−cached)+output` por
+modelo, inclui subagentes), `scripts/context-guard.py` (WARN ≥150k/80
+passos, BLOCK ≥300k/200 — exit 1/2; BLOCK na sessão do incidente), teto
+duro de 16k chars no `compress-output.sh`, regras anti-duplicação de
+subagentes (`clearer-orchestration`) e seção “Guarda de contexto” no
+`token-economy` + `/token-report`. Decisão e limites: ADR-008.
+Pendente (orientação do mantenedor, 2026-11-19): ativar no host
+(`muse plugins update clearer-muse` + restart) e recalibrar os
+limiares (150k/300k, 80/200 passos) com testes reais — **quando voltar
+nosso limite** (sessão nova, contexto zerado), não nesta sessão; até lá
+os limiares valem como heurística do incidente, sem endurecer.

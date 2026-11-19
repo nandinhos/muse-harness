@@ -45,6 +45,7 @@ de resposta com evidências e economia de tokens — instalável em qualquer pro
 |------------|--------|
 | Dispatcher `clearer` (ciclo + Risk Dial + contrato) | ativo |
 | Addon `token-economy` (tetos 8k/4k/2k/1k, compressão, higiene) | ativo |
+| Guarda de contexto (`session_cost.py` custo real, `context-guard.py` WARN/BLOCK, compressão 16k chars) | ativo |
 | Addon `code-minimalism` (Escada Ponytail v5, marcação `shortcut:`) | opt-in |
 | Addon `debugging` (5 gates bloqueantes, relatório lesson-ready) | opt-in |
 | Hook `safety-gate` (`PreToolUse`, veredito vinculante) | ativo |
@@ -73,7 +74,8 @@ profiles/clearer-muse/        # cópia canônica: skills, commands, hooks, scrip
     detect-project.sh,diff-audit.sh,doc-audit.py,doc-audit.sh,evidence-report.sh,
     evidence_report.py,git_inspect.py,heartbeat.sh,preflight.sh,setup-branches.sh,
     route_classify.py,stop-guard.py,system_one.py,task-monitor.sh,telemetry_log.py,
-    telemetry_report.py,test-runner.sh,token-budget.py}              # 22 arquivos
+    telemetry_report.py,test-runner.sh,token-budget.py,session_cost.py,
+    context-guard.py}                                                # 24 arquivos
   tests/{run-all-tests.sh + 8 suítes de contrato/regressão}
 profiles/muse-ceh/              # dispatcher pessoal v0.2.1 (skill + comando + teste, sem hook)
 docs/CREATE-PROFILE.md        # guia: criar um profile harness do zero
