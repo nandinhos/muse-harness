@@ -42,14 +42,29 @@ _TEST_PATH_RE = re.compile(r"(?i)(^|/)(tests?|__tests__|spec)/|test_[^/]+$|"
 def parse_diff(text: str):
     """(arquivos, linhas_adicionadas_sem_header) a partir de um diff unificado."""
     files, added = [], []
+    old_path = None
     for line in text.splitlines():
-        if line.startswith("diff --git "):
-            parts = line.split()
-            if len(parts) >= 4:
-                files.append(parts[3].removeprefix("b/"))
+        if line.startswith("--- "):
+            old_path = line[4:].strip().removeprefix("a/")
+        elif line.startswith("+++ "):
+            new_path = line[4:].strip().removeprefix("b/")
+            chosen = old_path if new_path == "/dev/null" else new_path
+            if chosen and chosen != "/dev/null":
+                files.append(chosen)
+            old_path = None
         elif line.startswith("+") and not line.startswith("+++"):
             added.append(line[1:])
     return files, added
+
+
+def _flatten_hits(matches):
+    flat = []
+    for match in matches:
+        if isinstance(match, tuple):
+            flat.extend(part for part in match if part)
+        elif match:
+            flat.append(match)
+    return flat
 
 
 def _q(pid, pergunta, hits):
@@ -62,15 +77,18 @@ def evaluate(diff_text: str) -> dict:
     files, added = parse_diff(diff_text)
     corpus_paths = "\n".join(files)
     corpus_added = "\n".join(added)
+    compact_added = re.sub(r"[\"'\\\s]+", "", corpus_added)
     perguntas = [
         _q("toca_auth", "O diff toca autenticacao/sessao/permissao?",
-           _AUTH_RE.findall(corpus_paths) + _AUTH_RE.findall(corpus_added)),
+           _flatten_hits(_AUTH_RE.findall(corpus_paths))
+           + _flatten_hits(_AUTH_RE.findall(corpus_added))),
         _q("toca_migracao", "O diff toca migracao/schema de dados?",
-           _MIGRATION_RE.findall(corpus_paths)
-           + [m if isinstance(m, str) else m[0]
-              for m in _MIGRATION_RE.findall(corpus_added)]),
+           _flatten_hits(_MIGRATION_RE.findall(corpus_paths))
+           + _flatten_hits(_MIGRATION_RE.findall(corpus_added))),
         _q("segredo_provavel", "Ha valor com forma de segredo nas linhas novas?",
-           ["padrao-segredo"] if _SECRET_VALUE_RE.search(corpus_added) else []),
+           ["padrao-segredo"] if (_SECRET_VALUE_RE.search(corpus_added)
+                                  or _SECRET_VALUE_RE.search(compact_added))
+           else []),
         _q("toca_gate_ci", "O diff toca CI, hooks ou certificados?",
            [f for f in files if _GATE_RE.search(f)]),
         _q("inclui_teste", "O diff inclui ou altera testes?",
@@ -96,19 +114,26 @@ def evaluate(diff_text: str) -> dict:
             "recomendacao": rec}
 
 
+MAX_DIFF_BYTES = 5_000_000
+
+
 def read_diff(diff_file):
     if diff_file:
         try:
-            return Path(diff_file).read_text(encoding="utf-8",
-                                             errors="replace")
+            path = Path(diff_file)
+            if path.stat().st_size > MAX_DIFF_BYTES:
+                return None
+            return path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             return None
     try:
         res = subprocess.run(["git", "diff", "HEAD"], capture_output=True,
-                             text=True, timeout=10)
+                             timeout=10)
     except (OSError, subprocess.TimeoutExpired):
         return None
-    return res.stdout if res.returncode == 0 else None
+    if res.returncode != 0 or len(res.stdout) > MAX_DIFF_BYTES:
+        return None
+    return res.stdout.decode("utf-8", errors="replace")
 
 
 def main(argv=None) -> int:

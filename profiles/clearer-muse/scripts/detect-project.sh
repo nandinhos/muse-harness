@@ -5,8 +5,8 @@ set -u
 # Timeout portavel p/ sondas (Etapa4 F5, regra 15: subprocesso sem teto = hang).
 _run_with_timeout() {
   local secs="$1"; shift
-  if command -v timeout >/dev/null 2>&1; then timeout "$secs" "$@";
-  elif command -v gtimeout >/dev/null 2>&1; then gtimeout "$secs" "$@";
+  if command -v timeout >/dev/null 2>&1; then timeout --kill-after=1s "${secs}s" "$@";
+  elif command -v gtimeout >/dev/null 2>&1; then gtimeout --kill-after=1s "${secs}s" "$@";
   else "$@"; fi
 }
 TARGET="${1:-$(pwd)}"

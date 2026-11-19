@@ -43,21 +43,38 @@ def load_config(path: Path):
 def classify(task: str, signals: dict) -> dict:
     text = norm(task)
     hit = lambda group: [s for s in signals[group] if s in text]
+
+    def first_pos(group):
+        positions = [text.find(s) for s in signals[group] if s in text]
+        return min(positions) if positions else None
+
     high = hit("high_signals")
     if high:
         return {"classe": "HIGH", "tier": "T4", "sinais": high}
+
+    # Fora de HIGH, o verbo/escopo que aparece primeiro arbitra LOW vs
+    # MEDIUM: "corrigir typo no endpoint" é LOW; "implementar endpoint"
+    # continua MEDIUM. Sinais complexos só elevam uma tarefa MEDIUM.
+    medium_pos = first_pos("medium_signals")
+    low_pos = min(
+        [p for p in (first_pos("low_t0_signals"),
+                     first_pos("low_signals")) if p is not None],
+        default=None)
+    if low_pos is not None and (medium_pos is None or low_pos <= medium_pos):
+        low0 = hit("low_t0_signals")
+        low0_pos = first_pos("low_t0_signals")
+        low1_pos = first_pos("low_signals")
+        if low0 and (low1_pos is None or low0_pos <= low1_pos):
+            return {"classe": "LOW", "tier": "T0", "sinais": low0}
+        return {"classe": "LOW", "tier": "T1", "sinais": hit("low_signals")}
     complex_ = hit("medium_complex_signals")
-    if complex_:
+    if medium_pos is not None and complex_:
         return {"classe": "MEDIUM", "tier": "T3", "sinais": complex_}
     medium = hit("medium_signals")
     if medium:
         return {"classe": "MEDIUM", "tier": "T2", "sinais": medium}
-    low0 = hit("low_t0_signals")
-    if low0:
-        return {"classe": "LOW", "tier": "T0", "sinais": low0}
-    low = hit("low_signals")
-    if low:
-        return {"classe": "LOW", "tier": "T1", "sinais": low}
+    if complex_:
+        return {"classe": "MEDIUM", "tier": "T3", "sinais": complex_}
     return {"classe": "MEDIUM", "tier": "T2", "sinais": ["default-sem-sinal"]}
 
 

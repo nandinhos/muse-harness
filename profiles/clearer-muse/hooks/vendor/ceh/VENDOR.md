@@ -36,5 +36,15 @@ git archive <nova-ref-validada> clearer-engineering/scripts/ceh_core \
   puro retornava `allow` (OBSERVED em 2026-09-28). O upstream corrigiu com
   early catastrophic check em `evaluate_command()` (`main 6fc5a07`, CEH v1.3.1)
   e o adapter voltou a delegar 100% ao motor. Desde a v2.1.2 o check vive em
-  `ceh_core/engine.py` (invariante P2). Nenhum controle compensatório
-  ativo no momento.
+  `ceh_core/engine.py` (invariante P2).
+- **CC2 (ATIVO, revisão Codex 2026-11-19)**: o adapter `../safety-gate.py`
+  adiciona apenas controles de borda do host Muse, sem editar o bundle:
+  (a) ferramentas desconhecidas com formas executáveis alternativas
+  (`cmd`, `chars`, `args`, `input.command`, ...) são avaliadas como
+  terminal; `muse.workflow/script` é exceção porque as ferramentas filhas
+  voltam ao PreToolUse; (b) lojas de credencial conhecidas são bloqueadas
+  em leitura/escrita por ferramenta de arquivo; (c) comando cujo executável
+  é só uma variável ou `eval` com expansão é negado como dinâmico não
+  inspecionável; (d) comentário puro não derruba o motor e qualquer exceção
+  de avaliação vira deny dual, nunca traceback. Se o upstream absorver
+  essas bordas, remover o CC2 e registrar aqui.

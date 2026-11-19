@@ -18,7 +18,7 @@ topologia clássica), com tudo publicado.
 
 | Item | Estado |
 |---|---|
-| `profiles/clearer-muse/` | canônico v0.12.0 (Etapa 4): 16 skills, 2 commands, hook `safety-gate` (adapter sobre o motor CEH v2.3.1 vendorizado em `hooks/vendor/ceh/`, ref `4db20b7`), 22 scripts, suíte `tests/` 9/9 + E2E `evals/orchestration/` 6/6 |
+| `profiles/clearer-muse/` | canônico v0.12.1 (Etapa 4 + correções da revisão Codex): 16 skills, 2 commands, hook `safety-gate` (adapter sobre o motor CEH v2.3.1 vendorizado em `hooks/vendor/ceh/`, ref `4db20b7`), 22 scripts, suíte `tests/` 9/9 + E2E `evals/orchestration/` 6/6 |
 | `profiles/muse-ceh/` | dispatcher pessoal v0.2.1 (skill + comando + teste, `hooks=0`; ver `HANDOFF-muse-ceh.md`) |
 | `docs/CREATE-PROFILE.md` | guia de criação de profile (anatomia, 7 passos, segredos, checklist, riscos) |
 | `templates/mcp.json` | base MCP só com `context7` + `${CONTEXT7_API_KEY}` (sem segredo) |
@@ -191,3 +191,28 @@ neste ciclo). Pendentes vivos: ver §12 (backlog).
   pré-registrado em `evals/orchestration/CRITERIA.md` (N≥10/célula,
   0 BLOCKER perdido). Sem esse número, `clearer-orchestration` continua
   só classificando/registrando; nenhuma economia pode ser afirmada.
+- [ ] **Resíduos da revisão externa Codex (2026-11-19)** — itens fora da
+  correção local desta rodada: certificado local segue sem assinatura
+  (modelo de confiança local; G9 protege escrita via ferramentas, mas
+  não é proveniência criptográfica), execução dinâmica além dos padrões
+  compensatórios CC2 e leitura de segredos via shell permanecem limites
+  do gate estático, e `install.sh` em update usa fonte/escopo já
+  registrados (mensagem corrigida; troca de fonte exige remove+install).
+
+## 13. Revisão externa Codex — correções v0.12.1
+
+Duas passagens read-only do Muse (delta `ef13379..HEAD` e projeto
+inteiro), cada alegação reverificada localmente antes de corrigir.
+Corrigidos com teste vermelho→verde: formas executáveis alternativas e
+`bash_input` no adapter, crash com comentário puro, execução dinâmica
+estreita (CC2 em `VENDOR.md`), caminhos de credencial em ferramentas de
+arquivo, máscara/agregador de telemetria, arbitragem do roteador,
+`system_one` (migração/path), delimitadores do `git_inspect`,
+integrações malformadas/symlink/wrapper `env`, timeout com kill-after,
+certificado JSON atômico, consentimento/CRLF/modo em install/uninstall,
+CI com permissões mínimas, actions pinadas e E2E de orquestração, e
+timeouts de git em `evidence_report`/`doc-audit`.
+**Refutados por reprodução:** bypass por `--git-dir`/`--work-tree`,
+opções/URL/file de push e “tag antiga libera branch não testada” —
+todas as variantes negam; tag antiga isolada é conteúdo certificado.
+Veredito e resíduos: ver §12.

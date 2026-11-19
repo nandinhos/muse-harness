@@ -104,6 +104,32 @@ STDIN_PAYLOAD='{"tool_name":"edit_file","tool_input":{"path":".ceh/x"},"model_pr
 run "D14-edit-ceh-deny" 0 '"decision": "block"' 'G9' -- \
   env -i PATH="$PATH" python3 "$HOOK"
 
+# --- D19-D24 (revisao Codex): formas executaveis alternativas nao passam ---
+STDIN_PAYLOAD='{"tool_name":"bash_input","tool_input":{"session_id":1,"chars":"rm -rf /\n"},"model_provider":"meta","turn_id":"t","cwd":"/tmp"}' \
+run "D19-bash-input-chars-deny" 0 '"decision": "block"' 'CEH-SAFETY DENY' -- \
+  env -i PATH="$PATH" python3 "$HOOK"
+STDIN_PAYLOAD='{"tool_name":"shell_v2","tool_input":{"cmd":"rm -rf /"},"model_provider":"meta","turn_id":"t","cwd":"/tmp"}' \
+run "D20-unknown-cmd-deny" 0 '"decision": "block"' 'CEH-SAFETY DENY' -- \
+  env -i PATH="$PATH" python3 "$HOOK"
+STDIN_PAYLOAD='{"tool_name":"future_exec","tool_input":{"args":["rm","-rf","/"]},"model_provider":"meta","turn_id":"t","cwd":"/tmp"}' \
+run "D21-unknown-args-deny" 0 '"decision": "block"' 'CEH-SAFETY DENY' -- \
+  env -i PATH="$PATH" python3 "$HOOK"
+STDIN_PAYLOAD='{"tool_name":"future_exec","tool_input":{"input":{"command":"rm -rf /"}},"model_provider":"meta","turn_id":"t","cwd":"/tmp"}' \
+run "D22-unknown-nested-input-deny" 0 '"decision": "block"' 'CEH-SAFETY DENY' -- \
+  env -i PATH="$PATH" python3 "$HOOK"
+STDIN_PAYLOAD='{"tool_name":"read_file","tool_input":{"path":"/home/test/.codex/auth.json"},"model_provider":"meta","turn_id":"t","cwd":"'"$TMPD"'"}' \
+run "D23-read-credential-deny" 0 '"decision": "block"' 'SENSITIVE PATH' -- \
+  env -i PATH="$PATH" python3 "$HOOK"
+run "D24-argv-comment-allow" 0 '{}' 'CEH-SAFETY ALLOW' -- \
+  bash -c "cd \"$TMPD\" && env -u CEH_ENV -u APP_ENV -u NODE_ENV python3 \"$HOOK\" \"# apenas comentario\""
+run "D25-argv-dynamic-head-deny" 0 '"decision": "block"' 'dinâmico não inspecionável' -- \
+  bash -c "cd \"$TMPD\" && env CEH_ENV=production python3 \"$HOOK\" '\$DANGER'"
+
+run "D26-argv-compound-eval-deny" 0 '"decision": "block"' 'dinâmico não inspecionável' -- \
+  bash -c "cd \"$TMPD\" && env CEH_ENV=production python3 \"$HOOK\" 'cd /tmp && eval \"\$DANGER\"'"
+run "D27-argv-interp-env-deny" 0 '"decision": "block"' 'dinâmico não inspecionável' -- \
+  bash -c "cd \"$TMPD\" && env CEH_ENV=production python3 \"$HOOK\" \"python3 -c 'import os; os.system(os.environ[\\\"DANGER\\\"])'\""
+
 rm -rf "$TMPD"
 echo "---"
 echo "DUAL-CONTRACT: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"

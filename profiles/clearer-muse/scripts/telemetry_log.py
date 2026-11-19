@@ -26,6 +26,17 @@ TOKEN_SOURCES = {"api", "estimated_chars4"}
 TOOL_RE = re.compile(r"^[A-Za-z0-9_.\-]{1,80}$")
 
 _SECRET_PATTERNS = [
+    (re.compile(r"(?i)(aws[_-]?secret[_-]?access[_-]?key|client[_-]?secret|"
+                r"private[_-]?key|password|passwd|secret|token|api[_-]?key|"
+                r"authorization)\s*[:=]\s*([\"'])(?:\\.|(?!\2).)*\2"),
+     r"\1=REDACTED"),
+    (re.compile(r"\beyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}\."
+                r"[A-Za-z0-9_\-]{8,}\b"), "REDACTED_JWT"),
+    (re.compile(r"(https?://[^\s/@:]+:)([^\s/@]+)(@)"),
+     r"\1REDACTED\3"),
+    (re.compile(r"(?<![A-Za-z0-9+/=])(?=[A-Za-z0-9+/=]{32,}"
+                r"(?![A-Za-z0-9+/=]))(?=[A-Za-z0-9+/=]*[+/])"
+                r"[A-Za-z0-9+/]{32,}={0,2}"), "REDACTED_TOKEN"),
     (re.compile(r"sk-[A-Za-z0-9_\-]{8,}"), "REDACTED_SK"),
     (re.compile(r"gh[pousr]_[A-Za-z0-9]{8,}"), "REDACTED_GH"),
     (re.compile(r"github_pat_[A-Za-z0-9_]{8,}"), "REDACTED_GH"),
@@ -34,7 +45,8 @@ _SECRET_PATTERNS = [
     (re.compile(r"(?i)bearer\s+\S+"), "Bearer REDACTED"),
     (re.compile(r"-----BEGIN[^-]*-----.*?-----END[^-]*-----", re.S),
      "REDACTED_PEM"),
-    (re.compile(r"(?i)(password|passwd|secret|token|api[_-]?key|"
+    (re.compile(r"(?i)(aws[_-]?secret[_-]?access[_-]?key|client[_-]?secret|"
+                r"private[_-]?key|password|passwd|secret|token|api[_-]?key|"
                 r"authorization)\s*[:=]\s*(?:\w+\s+)?\S+"), r"\1=REDACTED"),
     (re.compile(r"\b[A-Za-z0-9_\-]{32,}\b"), "REDACTED_TOKEN"),
 ]

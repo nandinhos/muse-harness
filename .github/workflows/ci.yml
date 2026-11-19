@@ -1,5 +1,8 @@
 name: CLEARER Muse Quality & Test Suite
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main, dev]
@@ -13,25 +16,24 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
 
       - name: Syntax check on Bash scripts
         run: |
-          find profiles/clearer-muse/scripts -name "*.sh" -exec bash -n {} +
-          bash -n evals/run.sh
+          find profiles/clearer-muse/scripts profiles/clearer-muse/tests evals -name "*.sh" -exec bash -n {} +
+          bash -n install.sh uninstall.sh
 
       - name: Syntax check on Python scripts
         run: |
-          python3 -m py_compile profiles/clearer-muse/hooks/safety-gate.py
-          python3 -m py_compile profiles/clearer-muse/scripts/doc-audit.py
-          python3 -m py_compile profiles/clearer-muse/scripts/token-budget.py
+          find profiles/clearer-muse/scripts -maxdepth 1 -name "*.py" -exec python3 -m py_compile {} +
+          python3 -m py_compile profiles/clearer-muse/hooks/safety-gate.py evals/orchestration/run_eval.py
 
       - name: Make scripts executable
         run: |
@@ -45,6 +47,10 @@ jobs:
       - name: Run full profile suite (contract + scripts smoke)
         run: |
           bash profiles/clearer-muse/tests/run-all-tests.sh
+
+      - name: Run orchestration E2E (pre-registered criteria)
+        run: |
+          bash evals/orchestration/run.sh
 
       - name: Run integration scripts (read-only smoke)
         run: |

@@ -26,7 +26,7 @@ def inspect(repo: str, limit: int, grep) -> dict:
         base["error"] = "nao e um repositorio git"
         return base
     cmd = ["git", "-C", repo, "log", f"-n{limit}",
-           "--pretty=format:%h|%an|%ad|%s", "--date=short"]
+           "--pretty=format:%h%x1f%an%x1f%ad%x1f%s%x1e", "--date=short"]
     if grep:
         cmd.extend(["--grep", grep])
     try:
@@ -37,8 +37,11 @@ def inspect(repo: str, limit: int, grep) -> dict:
     if res.returncode != 0:
         base["error"] = res.stderr.strip()[:200] or "git log falhou"
         return base
-    for line in res.stdout.splitlines():
-        parts = line.split("|", 3)
+    for record in res.stdout.split("\x1e"):
+        record = record.strip("\n")
+        if not record:
+            continue
+        parts = record.split("\x1f", 3)
         if len(parts) == 4:
             base["commits"].append({
                 "hash": parts[0], "author": parts[1],

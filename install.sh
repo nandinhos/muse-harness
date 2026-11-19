@@ -17,6 +17,7 @@ for arg in "$@"; do
     --scope=*) SCOPE="${arg#--scope=}"; shift || true ;;
     --yes|-y) ASSUME_YES=1; shift || true ;;
     --help|-h) sed -n '2,9p' "$0"; exit 0 ;;
+    -*) echo "[ERRO] argumento desconhecido: $arg" >&2; exit 2 ;;
     *) shift || true ;;
   esac
 done
@@ -26,6 +27,11 @@ info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
 success() { echo -e "${GREEN}[OK]${NC} $1"; }
 warn()    { echo -e "${YELLOW}[AVISO]${NC} $1"; }
 fail()    { echo -e "${RED}[ERRO]${NC} $1"; exit 1; }
+
+case "$SCOPE" in
+  user|project) ;;
+  *) echo "[ERRO] --scope invalido: $SCOPE (use user ou project)" >&2; exit 2 ;;
+esac
 
 # 1. Pré-requisitos
 for cmd in git python3 bash muse; do
@@ -52,12 +58,13 @@ else
 fi
 
 # 3. Valida e instala/atualiza o plugin
-muse plugins validate "$PROFILE_DIR" >/dev/null \
-  || fail "bundle inválido (muse plugins validate)."
+muse plugins validate "$PROFILE_DIR" \
+  || fail "bundle inválido (muse plugins validate; saída acima)."
 success "bundle válido."
-if muse plugins list 2>/dev/null | grep -q "clearer-muse"; then
+PLUGIN_LIST="$(muse plugins list 2>/dev/null || true)"
+if grep -q "clearer-muse" <<< "$PLUGIN_LIST"; then
   muse plugins update clearer-muse || fail "falha ao atualizar clearer-muse."
-  success "plugin clearer-muse atualizado (scope: $SCOPE)."
+  success "plugin clearer-muse atualizado pela fonte/escopo já registrados (--scope não é reaplicado em update)."
 else
   muse plugins install "$PROFILE_DIR" --scope "$SCOPE" \
     || fail "falha ao instalar clearer-muse."
@@ -68,33 +75,53 @@ fi
 MARKER_BEGIN="# BEGIN CLEARER-MUSE ALIASES"
 MARKER_END="# END CLEARER-MUSE ALIASES"
 SCR="$PROFILE_DIR/scripts"
+SCR_Q=$(printf '%q' "$SCR")
+SOURCE_Q=$(printf '%q' "$SOURCE_DIR")
+PROFILE_Q=$(printf '%q' "$PROFILE_DIR")
 ALIAS_BLOCK="$MARKER_BEGIN
-alias ceh-env='bash $SCR/detect-project.sh .'
-alias ceh-preflight='bash $SCR/preflight.sh'
-alias ceh-evals='bash $SOURCE_DIR/evals/run.sh'
-alias ceh-tests='bash $SCR/../tests/run-all-tests.sh 2>/dev/null || bash $PROFILE_DIR/tests/run-all-tests.sh'
-alias ceh-branches='bash $SCR/setup-branches.sh'
-alias ceh-monitor='bash $SCR/task-monitor.sh'
-alias ceh-doc-audit='bash $SCR/doc-audit.sh'
-alias ceh-conselho='bash $SCR/conselho-seniores.sh'
-alias ceh-help='bash $SCR/ceh-help.sh'
+alias ceh-env='bash $SCR_Q/detect-project.sh .'
+alias ceh-preflight='bash $SCR_Q/preflight.sh'
+alias ceh-evals='bash $SOURCE_Q/evals/run.sh'
+alias ceh-tests='bash $PROFILE_Q/tests/run-all-tests.sh'
+alias ceh-branches='bash $SCR_Q/setup-branches.sh'
+alias ceh-monitor='bash $SCR_Q/task-monitor.sh'
+alias ceh-doc-audit='bash $SCR_Q/doc-audit.sh'
+alias ceh-conselho='bash $SCR_Q/conselho-seniores.sh'
+alias ceh-help='bash $SCR_Q/ceh-help.sh'
 $MARKER_END"
 
 RC_FILES="${RC_FILES:-$HOME/.bashrc $HOME/.zshrc}"
-if [[ "$ASSUME_YES" -eq 0 && -t 0 ]]; then
-  read -rp "Adicionar aliases ceh-* a $RC_FILES? [s/N] " ans
-  [[ "$ans" == [sSyY]* ]] || { info "aliases ignorados por opção do usuário."; exit 0; }
+if [[ "$ASSUME_YES" -eq 0 ]]; then
+  if [[ -t 0 ]]; then
+    read -rp "Adicionar aliases ceh-* a $RC_FILES? [s/N] " ans
+    [[ "$ans" == [sSyY]* ]] || { info "aliases ignorados por opção do usuário."; exit 0; }
+  else
+    info "aliases ignorados: sessão não interativa sem --yes; nenhum rc foi alterado."
+    exit 0
+  fi
 fi
 for rc in $RC_FILES; do
   [[ -f "$rc" ]] || continue
   python3 - "$rc" "$ALIAS_BLOCK" <<'PYEOF'
-import re, sys
+import os, re, stat, sys, tempfile
 rc_path, block = sys.argv[1], sys.argv[2].strip()
 b, e = "# BEGIN CLEARER-MUSE ALIASES", "# END CLEARER-MUSE ALIASES"
-content = open(rc_path, encoding="utf-8").read()
-pat = re.compile(rf"{re.escape(b)}.*?{re.escape(e)}\n?", re.DOTALL)
-content = pat.sub(block + "\n", content) if pat.search(content) else content.rstrip("\n") + "\n\n" + block + "\n"
-open(rc_path, "w", encoding="utf-8").write(content)
+data = open(rc_path, "rb").read()
+content = data.decode("utf-8", "surrogateescape")
+nl = "\r\n" if b"\r\n" in data else "\n"
+block = block.replace("\r\n", "\n").replace("\n", nl)
+pat = re.compile(rf"{re.escape(b)}.*?{re.escape(e)}(?:\r?\n)?", re.DOTALL)
+content = pat.sub(block + nl, content) if pat.search(content) else content.rstrip("\r\n") + nl + nl + block + nl
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(rc_path)), prefix=".clearer-muse-")
+try:
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(content.encode("utf-8", "surrogateescape"))
+    os.chmod(tmp, stat.S_IMODE(os.stat(rc_path).st_mode))
+    os.replace(tmp, rc_path)
+except BaseException:
+    try: os.unlink(tmp)
+    except OSError: pass
+    raise
 print(f"aliases sincronizados em {rc_path}")
 PYEOF
 done

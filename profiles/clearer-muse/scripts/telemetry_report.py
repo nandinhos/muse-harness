@@ -22,6 +22,35 @@ def percentile(sorted_vals, pct):
     return sorted_vals[idx]
 
 
+_DECISIONS = {"allow", "deny", "ask", "overwrite", "shadow", "info"}
+_TOKEN_SOURCES = {"api", "estimated_chars4"}
+
+
+def _valid_event(rec) -> bool:
+    if not isinstance(rec, dict):
+        return False
+    if not isinstance(rec.get("decision"), str) \
+            or rec["decision"] not in _DECISIONS:
+        return False
+    if not isinstance(rec.get("tool"), str) or not rec["tool"]:
+        return False
+    latency = rec.get("latency_ms")
+    if latency is not None:
+        if isinstance(latency, bool) or not isinstance(latency, (int, float)):
+            return False
+        if latency != latency or latency in (float("inf"), float("-inf")):
+            return False
+        if latency < 0:
+            return False
+    tokens = rec.get("tokens")
+    source = rec.get("token_source")
+    if tokens is None:
+        return source is None
+    return (isinstance(tokens, int) and not isinstance(tokens, bool)
+            and tokens >= 0 and isinstance(source, str)
+            and source in _TOKEN_SOURCES)
+
+
 def aggregate(path: Path) -> dict:
     events, invalid = [], 0
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -29,16 +58,18 @@ def aggregate(path: Path) -> dict:
             continue
         try:
             rec = json.loads(line)
-            if not isinstance(rec, dict) or "decision" not in rec:
-                raise ValueError("sem decision")
+        except json.JSONDecodeError:
+            invalid += 1
+            continue
+        if _valid_event(rec):
             events.append(rec)
-        except (json.JSONDecodeError, ValueError):
+        else:
             invalid += 1
     lat = sorted(e["latency_ms"] for e in events
-                 if isinstance(e.get("latency_ms"), (int, float)))
+                 if e.get("latency_ms") is not None)
     tokens = Counter()
     for e in events:
-        if isinstance(e.get("tokens"), int) and e.get("token_source"):
+        if e.get("tokens") is not None:
             tokens[e["token_source"]] += e["tokens"]
     return {
         "eventos": len(events),

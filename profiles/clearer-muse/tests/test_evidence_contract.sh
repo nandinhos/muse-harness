@@ -415,6 +415,40 @@ if [[ "$O38" == *'[pending] nocmd-hook (hook)'* && "$O38" == *'sem comando decla
 else bad "E38-hook-sem-comando-falhou" "out=[$(echo "$O38" | head -c 300)]"; fi
 rm -rf "$T"
 
+# --- E39 Revisao Codex: hooks como objeto (nao-lista) => pending => FALHOU ---
+T=$(fresh_repo)
+mkdir -p "$T/profiles/clearer-muse/.muse-plugin"
+printf '%s\n' '{"capabilities":{"hooks":{"id":"obj-hook","command":["python3"],"event":"PreToolUse"}}}' > "$T/profiles/clearer-muse/.muse-plugin/plugin.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: hooks objeto"
+H39=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H39"
+O39="$(run_rep "$T")"
+if [[ "$O39" == *'[pending] plugin.json (hook)'* && "$O39" == *'`hooks` inválido'* && "$O39" == *'**FALHOU**'* ]]; then ok "E39-hooks-objeto-falhou";
+else bad "E39-hooks-objeto-falhou" "out=[$(echo "$O39" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E40 Revisao Codex: executavel local via symlink => pending => FALHOU ---
+T=$(fresh_repo)
+mkdir -p "$T/profiles/clearer-muse/.muse-plugin" "$T/profiles/clearer-muse/hooks"
+ln -s /bin/true "$T/profiles/clearer-muse/hooks/gate.sh"
+printf '%s\n' '{"capabilities":{"hooks":[{"id":"link-hook","command":["./hooks/gate.sh"],"event":"PreToolUse"}]}}' > "$T/profiles/clearer-muse/.muse-plugin/plugin.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: hook symlink"
+H40=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H40"
+O40="$(run_rep "$T")"
+if [[ "$O40" == *'[pending] link-hook (hook)'* && "$O40" == *'symlink'* && "$O40" == *'**FALHOU**'* ]]; then ok "E40-hook-symlink-falhou";
+else bad "E40-hook-symlink-falhou" "out=[$(echo "$O40" | head -c 300)]"; fi
+rm -rf "$T"
+
+# --- E41 Revisao Codex: wrapper env nao absolve executavel interno ausente ---
+T=$(fresh_repo)
+mkdir -p "$T/profiles/clearer-muse/.muse-plugin"
+printf '%s\n' '{"capabilities":{"hooks":[{"id":"env-hook","command":["env","FOO=1","missingbin-xyz"],"event":"PreToolUse"}]}}' > "$T/profiles/clearer-muse/.muse-plugin/plugin.json"
+git -C "$T" add .; git -C "$T" commit -qm "feat: hook env wrapper"
+H41=$(git -C "$T" rev-parse HEAD); mkcert "$T" PASS "$H41"
+O41="$(run_rep "$T")"
+if [[ "$O41" == *'[pending] env-hook (hook)'* && "$O41" == *'ausente no PATH'* && "$O41" == *'**FALHOU**'* ]]; then ok "E41-hook-env-interno-ausente";
+else bad "E41-hook-env-interno-ausente" "out=[$(echo "$O41" | head -c 300)]"; fi
+rm -rf "$T"
+
 echo "---"
 echo "EVIDENCE-CONTRACT: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
 [[ "$FAIL" -eq 0 ]]

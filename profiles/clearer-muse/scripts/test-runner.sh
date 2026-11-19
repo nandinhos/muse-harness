@@ -13,8 +13,8 @@ set -u
 # Timeout portavel p/ sondas (Etapa4 F5, regra 15: subprocesso sem teto = hang).
 _run_with_timeout() {
   local secs="$1"; shift
-  if command -v timeout >/dev/null 2>&1; then timeout "$secs" "$@";
-  elif command -v gtimeout >/dev/null 2>&1; then gtimeout "$secs" "$@";
+  if command -v timeout >/dev/null 2>&1; then timeout --kill-after=1s "${secs}s" "$@";
+  elif command -v gtimeout >/dev/null 2>&1; then gtimeout --kill-after=1s "${secs}s" "$@";
   else "$@"; fi
 }
 echo "=== [CEH test-runner] $(date -u +%Y-%m-%dT%H:%M:%SZ) | $PWD ==="
@@ -109,17 +109,32 @@ echo "EXIT CODE: $CODE"
 if [[ $WORKTREE_DIRTY -eq 0 ]] && mkdir -p "$REPO_ROOT/.ceh" 2>/dev/null && [[ -d "$REPO_ROOT/.ceh" ]]; then
   COMMIT=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo "untracked")
   STATUS="FAIL"; [[ $CODE -eq 0 ]] && STATUS="PASS"
-  cat > "$REPO_ROOT/.ceh/last-ci-run.json" <<EOF
-{
-  "commit_hash": "$COMMIT",
-  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "command": "$CMD",
-  "canonical_verified": $CANONICAL_VERIFIED,
-  "status": "$STATUS",
-  "exit_code": $CODE
+  CERT_FILE="$REPO_ROOT/.ceh/last-ci-run.json"
+  CERT_TMP="$CERT_FILE.tmp"
+  # JSON via Python (escape correto) + replace atomico: comando com
+  # aspas/backslash nao corrompe o certificado nem injeta campos.
+  if python3 - "$CERT_TMP" "$COMMIT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      "$CMD" "$CLEAN_RUN" "$CANONICAL_VERIFIED" "$STATUS" "$CODE" <<'PYEOF'; then
+import json, os, sys
+path, commit, ts, command, normalized, canonical, status, code = sys.argv[1:]
+payload = {
+    "commit_hash": commit,
+    "timestamp": ts,
+    "command": command,
+    "normalized_runner": normalized,
+    "canonical_verified": canonical == "true",
+    "status": status,
+    "exit_code": int(code),
 }
-EOF
-  cp "$OUTPUT_FILE" "$REPO_ROOT/.ceh/last-ci-run.log"  # D3: saída bruta citada pelo evidence-report
+with open(path, "w", encoding="utf-8") as fh:
+    fh.write(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
+os.replace(path, path.removesuffix(".tmp"))
+PYEOF
+    cp "$OUTPUT_FILE" "$REPO_ROOT/.ceh/last-ci-run.log"  # D3: saída bruta citada pelo evidence-report
+  else
+    echo "[CEH WARNING] Falha ao emitir Certificado de Voo em JSON válido; certificado anterior preservado."
+    rm -f "$CERT_TMP"
+  fi
 fi
 rm -f "$OUTPUT_FILE"
 exit $CODE

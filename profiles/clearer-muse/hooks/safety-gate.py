@@ -2,8 +2,10 @@
 """safety-gate.py — Host adapter Muse sobre motor `ceh_core` + `adapters` vendored.
 
 Integração absorção-0.9.0: o veredito é calculado pelo motor vendored em
-`hooks/vendor/ceh/` (CEH v2.3.1, ref `4db20b7`). Este arquivo contém ZERO
-lógica de regra — só roteamento de formato para o protocolo nativo do Muse.
+`hooks/vendor/ceh/` (CEH v2.3.1, ref `4db20b7`). Este arquivo é o adapter
+do host Muse: roteamento de formato + controles compensatórios locais
+documentados em `VENDOR.md` (formas executáveis alternativas, caminhos
+sensíveis e comando dinâmico não inspecionável).
 
 Contrato dual (sonda E19: runtime executa o hook do cache, decide pelo stdout):
 - stdout: JSON nativo — `{}` (allow) ou `{"decision": "block", "reason"}` (deny/ask),
@@ -24,6 +26,7 @@ import io
 import json
 import os
 import re
+import shlex
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -122,6 +125,155 @@ def _inside_plugin(path: Path) -> bool:
         return False
 
 
+def _is_comment_only(cmd: str) -> bool:
+    lines = [ln.strip() for ln in cmd.splitlines() if ln.strip()]
+    return bool(lines) and all(ln.startswith("#") for ln in lines)
+
+
+_DYNAMIC_HEAD_RE = re.compile(
+    r"(?:^|[;&|]\s*)(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)*[\"']?"
+    r"\$(?:\{[A-Za-z_][A-Za-z0-9_]*\}|[A-Za-z_][A-Za-z0-9_]*)(?:[\"']|\s|$)")
+_DYNAMIC_EVAL_RE = re.compile(
+    r"(?:^|[;&|]\s*)(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)*eval\b[^;&|]*\$")
+_DYNAMIC_INTERP_RE = re.compile(
+    r"(?i)\b(?:os\.(?:system|popen)|subprocess\.\w+|"
+    r"child_process\.\w+|execSync|spawnSync|system)\s*\([^\n;]*"
+    r"(?:os\.environ|environ\.get|process\.env|ENV\[|getenv\s*\()")
+
+
+def _terminal_decision(cmd: str, explicit_env: str | None, eval_cwd: Path,
+                       force_deny_push: bool) -> tuple[str, str, str, str]:
+    """Avalia terminal sem emitir; exceções do motor viram deny (fail-closed)."""
+    if _is_comment_only(cmd):
+        env, ev = _detect_env(explicit_env, "", eval_cwd)
+        return "allow", f"apenas comentário de shell ({ev})", env, "GENERAL"
+    if (_DYNAMIC_HEAD_RE.search(cmd) or _DYNAMIC_EVAL_RE.search(cmd)
+            or _DYNAMIC_INTERP_RE.search(cmd)):
+        env, _ev = _detect_env(explicit_env, cmd, eval_cwd)
+        return (
+            "deny",
+            "[CEH SAFETY GATE - FAIL-CLOSED] Comando dinâmico não "
+            "inspecionável: valor executável resolvido só em runtime.",
+            env,
+            "DYNAMIC_UNINSPECTABLE",
+        )
+    if force_deny_push and re.search(r"\bgit\s+push\b", cmd):
+        return (
+            "deny",
+            "[CEH PRE-PUSH CI GATE] Push bloqueado: "
+            "repositório de destino não resolvido a partir do hook.",
+            "production",
+            "PRE_PUSH_CI",
+        )
+    try:
+        return evaluate_command(cmd, explicit_env, base_cwd=eval_cwd)
+    except Exception as exc:
+        return (
+            "deny",
+            "[CEH SAFETY GATE - FAIL-CLOSED] Falha ao avaliar comando "
+            f"({exc.__class__.__name__}).",
+            explicit_env or "production",
+            "SYSTEM_FAIL_CLOSED",
+        )
+
+
+_SENSITIVE_BASENAMES = {
+    "auth.json", ".credentials.json", "credentials", ".netrc",
+    "login data", "cookies",
+}
+_SENSITIVE_SUFFIXES = (".pem", ".key", ".p12", ".pfx")
+
+
+def _is_sensitive_path(raw: str, cwd: Path) -> bool:
+    """Caminhos de credencial conhecidos; só bloqueia lojas de segredo."""
+    expanded = Path(os.path.expanduser(raw.strip().strip("'\"")))
+    full = expanded if expanded.is_absolute() else cwd / expanded
+    try:
+        full = full.resolve(strict=False)
+    except (OSError, RuntimeError):
+        pass
+    parts = [p.lower() for p in full.parts]
+    base = parts[-1] if parts else ""
+    if any(p in (".ssh", ".gnupg", ".aws") for p in parts):
+        return True
+    if base in _SENSITIVE_BASENAMES or base.startswith(
+            ("id_rsa", "id_ed25519", "id_ecdsa", "id_dsa")):
+        return True
+    if base.endswith(_SENSITIVE_SUFFIXES):
+        return True
+    if base == ".env":
+        return True
+    if base.startswith(".env.") and not base.endswith(
+            (".sample", ".example", ".template", ".dist")):
+        return True
+    return False
+
+
+_EXEC_KEYS = {
+    "command", "cmd", "commandline", "shell", "script", "code",
+    "chars", "stdin", "exec", "executable",
+}
+_LIST_KEYS = {"args", "argv"}
+_PATH_KEYS = {"path", "filepath", "targetfile", "filename", "file"}
+
+
+def _norm_key(key: Any) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(key).lower())
+
+
+def _collect_unknown_forms(value: Any, depth: int = 0,
+                           ignore_keys: frozenset[str] = frozenset()):
+    """Extrai (comandos, paths, malformado) de formas alternativas de tool."""
+    commands: list[str] = []
+    paths: list[str] = []
+    malformed = False
+    if depth > 6:
+        return commands, paths, True
+    if isinstance(value, dict):
+        for raw_key, item in value.items():
+            key = _norm_key(raw_key)
+            if key in ignore_keys:
+                continue
+            if key in _EXEC_KEYS or key in _LIST_KEYS:
+                if isinstance(item, str):
+                    if item.strip():
+                        commands.append(item)
+                elif isinstance(item, list):
+                    if item and all(isinstance(x, str) for x in item):
+                        commands.append(shlex.join(item))
+                    elif item:
+                        malformed = True
+                elif isinstance(item, dict):
+                    sub_c, sub_p, sub_bad = _collect_unknown_forms(
+                        item, depth + 1, ignore_keys)
+                    commands += sub_c
+                    paths += sub_p
+                    malformed = malformed or sub_bad
+                elif item is not None:
+                    malformed = True
+                continue
+            if key in _PATH_KEYS:
+                if isinstance(item, str):
+                    if item.strip():
+                        paths.append(item.strip())
+                elif item is not None:
+                    malformed = True
+                continue
+            sub_c, sub_p, sub_bad = _collect_unknown_forms(
+                item, depth + 1, ignore_keys)
+            commands += sub_c
+            paths += sub_p
+            malformed = malformed or sub_bad
+    elif isinstance(value, list):
+        for item in value:
+            sub_c, sub_p, sub_bad = _collect_unknown_forms(
+                item, depth + 1, ignore_keys)
+            commands += sub_c
+            paths += sub_p
+            malformed = malformed or sub_bad
+    return commands, paths, malformed
+
+
 # ---------------------------------------------------------------------------
 # Caminho nativo: payload Muse (E19) via adapters/muse.py upstream
 # ---------------------------------------------------------------------------
@@ -131,11 +283,11 @@ def _handle_unknown_tool(payload: dict[str, Any], tool: str) -> int:
     """Despacho por forma (delta local D4): o runtime roteia TODAS as ferramentas
     pelo PreToolUse (E19 + pós-restart: read_file/read_skill também disparam).
     Bloquear ferramenta desconhecida quebra o harness (regressão v0.9.0), então:
-    - com `command` string → avaliada como terminal (fail-closed, fecha bypass
-      via ferramentas de execução futuras e cobre `monitor.command`);
-    - com `command`/`path` presente e mal-tipado → malformado (fail-closed);
-    - com alvo em `.ceh/` → block G9 (impossível distinguir leitura/escrita;
-      leitura de certs continua liberada via `cat` no bash, regra G9 de leitura);
+    - com forma executável reconhecível (`command`, `cmd`, `chars`,
+      `script`, `code`, `args`, aninhado em `input`, ...) → avaliada como
+      terminal (fecha bypass via ferramentas futuras e `bash_input`);
+    - forma executável/arquivo mal-tipada → malformado (fail-closed);
+    - com alvo em `.ceh/` ou loja de credencial conhecida → block;
     - sem forma executável/arquivo (meta/leitura: read_skill, search, …) →
       passthrough ALLOW auditado.
     """
@@ -143,30 +295,56 @@ def _handle_unknown_tool(payload: dict[str, Any], tool: str) -> int:
     if ti_raw is not None and not isinstance(ti_raw, dict):
         return _emit("deny", "production", "tool_input não-objeto (fail-closed)")
     ti = ti_raw if isinstance(ti_raw, dict) else {}
-    cmd = ti.get("command")
-    if cmd is not None and not isinstance(cmd, str):
-        return _emit("deny", "production", "tool_input.command não-string (fail-closed)")
-    path = ti.get("path") or ti.get("file_path") or payload.get("path") or payload.get("file_path")
-    if path is not None and not isinstance(path, str):
-        return _emit("deny", "production", "alvo de arquivo não-string (fail-closed)")
+    # muse.workflow: `script` é JS de orquestração; cada tool filha volta
+    # ao PreToolUse. Não avaliar esse campo como shell (falso positivo).
+    ignore_keys = (frozenset({"script"})
+                   if _norm_key(tool).endswith("workflow")
+                   else frozenset())
+    commands, paths, malformed = _collect_unknown_forms(ti, 0, ignore_keys)
+    top_commands, top_paths, top_bad = _collect_unknown_forms(
+        {k: v for k, v in payload.items() if k != "tool_input"},
+        0, ignore_keys)
+    commands += top_commands
+    paths += top_paths
+    malformed = malformed or top_bad
+    if malformed:
+        return _emit("deny", "production",
+                     "forma executável/arquivo mal-tipada (fail-closed)")
     try:
         eval_cwd, explicit_env, force_deny_push = _MUSE.resolve_target(payload)
     except ValueError as exc:
         return _emit("deny", "production", f"alvo inválido (fail-closed): {exc}")
-    if isinstance(cmd, str) and cmd.strip():
-        cwd = eval_cwd if eval_cwd is not None else Path.cwd()
-        return _legacy_terminal(cmd, explicit_env, cwd, force_deny_push)
-    if isinstance(path, str) and path.strip():
-        cwd = eval_cwd if eval_cwd is not None else Path.cwd()
+    cwd = eval_cwd if eval_cwd is not None else Path.cwd()
+    for path in paths:
         env, _ev = _detect_env(explicit_env, "", cwd)
-        if is_protected_target(path.strip(), cwd):
+        if is_protected_target(path, cwd):
             return _emit(
                 "deny", env,
                 f"[CEH CERTIFICATE INTEGRITY - G9] Ferramenta '{tool}' tocando "
-                f".ceh/ ({path.strip()}) sem semântica conhecida (fail-closed).",
+                f".ceh/ ({path}) sem semântica conhecida (fail-closed).",
             )
+        if _is_sensitive_path(path, cwd):
+            return _emit(
+                "deny", env,
+                f"[CEH SENSITIVE PATH] Ferramenta '{tool}' tocando loja "
+                f"de credencial conhecida ({path}); acesso bloqueado.",
+            )
+    if commands:
+        rank = {"allow": 1, "ask": 2, "deny": 3}
+        chosen = None
+        for cmd in commands:
+            dec = _terminal_decision(
+                cmd, explicit_env, cwd, force_deny_push)
+            if chosen is None or rank.get(dec[0], 3) > rank.get(chosen[0], 3):
+                chosen = dec
+        decision, reason, env, _uc = chosen
+        if decision == "ask":
+            reason = _warn_reason(reason)
+        return _emit(decision, env, reason)
+    if paths:
+        env, _ev = _detect_env(explicit_env, "", cwd)
         return _emit("allow", env, f"ferramenta não-coberta '{tool}' fora de .ceh/ (passthrough auditado)")
-    env, ev = _detect_env(explicit_env, "", eval_cwd if eval_cwd is not None else Path.cwd())
+    env, ev = _detect_env(explicit_env, "", cwd)
     return _emit("allow", env, f"ferramenta não-coberta '{tool}' sem forma executável (passthrough auditado; {ev})")
 
 
@@ -184,11 +362,27 @@ def _handle_native(payload: dict[str, Any]) -> int:
         return _emit("deny", "production", str(resp.get("reason", exc)))
     with _in_cwd(req.cwd):
         if req.target_paths:
-            dec: Decision = evaluate(req)
+            cwd = Path(req.cwd).resolve() if req.cwd else Path.cwd()
+            sensitive = [p for p in req.target_paths
+                         if not is_protected_target(p, cwd)
+                         and _is_sensitive_path(p, cwd)]
+            if sensitive:
+                env, _ev = _detect_env(req.explicit_env, "", cwd)
+                return _emit(
+                    "deny", env,
+                    "[CEH SENSITIVE PATH] Escrita em loja de credencial "
+                    f"conhecida ({sensitive[0]}); acesso bloqueado.")
+            try:
+                dec: Decision = evaluate(req)
+            except Exception as exc:
+                return _emit(
+                    "deny", "production",
+                    "[CEH SAFETY GATE - FAIL-CLOSED] Falha ao avaliar "
+                    f"alvo ({exc.__class__.__name__}).")
         else:
-            d, r, e, _u = evaluate_command(
-                req.command, explicit_env=req.explicit_env, base_cwd=req.cwd
-            )
+            cwd = Path(req.cwd).resolve() if req.cwd else Path.cwd()
+            d, r, e, _u = _terminal_decision(
+                req.command, req.explicit_env, cwd, False)
             dec = Decision(decision=d, reason=r, environment=e)
     reason = _warn_reason(dec.reason) if dec.decision == "ask" else dec.reason
     return _emit(dec.decision, dec.environment, reason)
@@ -269,16 +463,8 @@ def _legacy_extract(payload: dict[str, Any]) -> tuple[str, str, str]:
 
 def _legacy_terminal(cmd: str, explicit_env: str | None, eval_cwd: Path,
                      force_deny_push: bool) -> int:
-    if force_deny_push and re.search(r"\bgit\s+push\b", cmd):
-        return _emit(
-            "deny",
-            "production",
-            "[CEH PRE-PUSH CI GATE] Push bloqueado: "
-            "repositório de destino não resolvido a partir do hook.",
-        )
-    decision, reason, env, _use_case = evaluate_command(
-        cmd, explicit_env, base_cwd=eval_cwd
-    )
+    decision, reason, env, _use_case = _terminal_decision(
+        cmd, explicit_env, eval_cwd, force_deny_push)
     if decision == "ask":
         reason = _warn_reason(reason)
     return _emit(decision, env, reason)
@@ -286,6 +472,12 @@ def _legacy_terminal(cmd: str, explicit_env: str | None, eval_cwd: Path,
 
 def _legacy_file(target: str, explicit_env: str | None, eval_cwd: Path) -> int:
     env, _ev = _detect_env(explicit_env, "", eval_cwd)
+    if not is_protected_target(target, eval_cwd) and _is_sensitive_path(
+            target, eval_cwd):
+        return _emit(
+            "deny", env,
+            "[CEH SENSITIVE PATH] Escrita em loja de credencial "
+            f"conhecida ({target}); acesso bloqueado.")
     if is_protected_target(target, eval_cwd):
         return _emit(
             "deny",
@@ -330,7 +522,30 @@ def main() -> int:
         )
         return 0
     if len(sys.argv) > 1 and sys.argv[1] in ("--check", "--command"):
-        _ceh_gate.main()  # delega: JSON + exit 0/1/2 do motor (--env/--cwd inclusos)
+        check_cmd = sys.argv[2] if len(sys.argv) > 2 else ""
+        if _is_comment_only(check_cmd):
+            print(json.dumps({
+                "decision": "allow",
+                "reason": "apenas comentário de shell",
+                "environment": "development",
+                "use_case": "GENERAL",
+                "command": check_cmd,
+            }, indent=2, ensure_ascii=False))
+            return 0
+        try:
+            _ceh_gate.main()  # delega: JSON + exit 0/1/2 do motor
+        except SystemExit:
+            raise
+        except Exception as exc:
+            print(json.dumps({
+                "decision": "deny",
+                "reason": "[CEH SAFETY GATE - FAIL-CLOSED] Falha ao "
+                          f"avaliar comando ({exc.__class__.__name__}).",
+                "environment": "production",
+                "use_case": "SYSTEM_FAIL_CLOSED",
+                "command": check_cmd,
+            }, indent=2, ensure_ascii=False))
+            return 2
         return 0
     if len(sys.argv) > 1:
         cmd = sys.argv[1]
@@ -341,7 +556,13 @@ def main() -> int:
         if isinstance(as_payload, dict):
             # Harness passou o payload via argv: roteia p/ o handler de
             # payload em vez de avaliar o JSON como shell.
-            return _handle_payload(as_payload)
+            try:
+                return _handle_payload(as_payload)
+            except Exception as exc:
+                return _emit(
+                    "deny", "production",
+                    "[CEH SAFETY GATE - FAIL-CLOSED] Falha ao avaliar "
+                    f"payload ({exc.__class__.__name__}).")
         if not cmd.strip():
             env, ev = _detect_env(None, "", Path.cwd())
             return _emit("allow", env, f"sem comando identificavel ({ev})")
@@ -359,7 +580,13 @@ def main() -> int:
         return _legacy_terminal(raw, None, Path.cwd(), False)
     if not isinstance(payload, dict):
         return _legacy_terminal(raw, None, Path.cwd(), False)
-    return _handle_payload(payload)
+    try:
+        return _handle_payload(payload)
+    except Exception as exc:
+        return _emit(
+            "deny", "production",
+            "[CEH SAFETY GATE - FAIL-CLOSED] Falha ao avaliar "
+            f"payload ({exc.__class__.__name__}).")
 
 
 if __name__ == "__main__":

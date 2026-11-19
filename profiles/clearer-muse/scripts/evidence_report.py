@@ -52,7 +52,11 @@ CONFLICT_RE = re.compile(r"^(<<<<<<< |>>>>>>> |=======$)")
 
 
 def git(*args: str) -> tuple[int, str]:
-    res = subprocess.run(["git", *args], capture_output=True, text=True)
+    try:
+        res = subprocess.run(["git", *args], capture_output=True,
+                             text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return 124, ""
     return res.returncode, res.stdout.strip()
 
 
@@ -75,7 +79,7 @@ def verify_proof(proof: str, head: str) -> tuple[str, str]:
         code, sha = git("rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
         if code != 0:
             return "UNSUPPORTED", f"commit `{ref}` não encontrado"
-        if subprocess.run(["git", "merge-base", "--is-ancestor", sha, head]).returncode == 0:
+        if git("merge-base", "--is-ancestor", sha, head)[0] == 0:
             return "SUPPORTED", f"commit `{sha[:7]}` na história do HEAD"
         return "PARTIALLY_SUPPORTED", f"commit `{sha[:7]}` existe, mas fora da história do HEAD"
     path = Path(proof)
@@ -135,7 +139,8 @@ def inspect_integrations(tests_state: str) -> list[dict]:
     (`.mcp.json`, `templates/mcp.json`). Sem declarações, retorna `[]`
     (degradação graciosa: seção omitida, sem penalidade). Vocabulário
     fechado de 3 estados:
-      - 'validated': declarada e coberta por suíte PASS nesta sessão.
+      - 'validated': declarada, executável/script estruturalmente íntegros
+        e suíte PASS nesta sessão (não implica handshake da integração).
       - 'configured without execution': declarada, não exercitada.
       - 'pending': declarada, porém arquivo/executável quebrado/ausente.
     """
@@ -151,15 +156,59 @@ def inspect_integrations(tests_state: str) -> list[dict]:
     def executable_problem(first: str, base: Path) -> str:
         # Etapa 3 (oficial 2d7b5f5+f9a22ed): valida parts[0] como o upstream.
         if first.startswith((".", "/")) or "/" in first:
+            candidates = [Path(first)] if Path(first).is_absolute() else [
+                Path(first), base / first]
+            if any(c.is_symlink() for c in candidates):
+                return f"executável local `{first}` é symlink não auditado"
             target = local_target(first, base)
             if target is None:
                 return f"executável local `{first}` não encontrado"
+            if target.is_symlink():
+                return f"executável local `{first}` é symlink não auditado"
             if not os.access(target, os.X_OK):
                 return f"executável local `{first}` sem permissão de execução"
             return ""
         if not shutil.which(first):
             return f"comando `{first}` ausente no PATH"
         return ""
+
+    def command_parts(cmd) -> list[str]:
+        if isinstance(cmd, list):
+            return [str(p) for p in cmd]
+        if isinstance(cmd, str):
+            try:
+                return shlex.split(cmd)
+            except Exception:
+                return cmd.split()
+        return []
+
+    def executable_index(parts: list[str]) -> int:
+        idx = 0
+        while idx < len(parts) and re.match(
+                r"^[A-Za-z_][A-Za-z0-9_]*=", parts[idx]):
+            idx += 1
+        if idx < len(parts) and Path(parts[idx]).name == "env":
+            idx += 1
+            while idx < len(parts):
+                tok = parts[idx]
+                if tok == "--":
+                    idx += 1
+                    break
+                if tok in ("-u", "--unset", "-C", "--chdir"):
+                    idx += 2
+                    continue
+                if tok.startswith(("--unset=", "--chdir=")) or (
+                        tok.startswith(("-u", "-C")) and len(tok) > 2):
+                    idx += 1
+                    continue
+                if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", tok):
+                    idx += 1
+                    continue
+                if tok.startswith("-"):
+                    idx += 1
+                    continue
+                break
+        return idx
 
     plugin_file = Path("profiles/clearer-muse/.muse-plugin/plugin.json")
     if plugin_file.is_file():
@@ -169,24 +218,17 @@ def inspect_integrations(tests_state: str) -> list[dict]:
                 integrations.append({"name": plugin_file.name, "type": "hook", "file": str(plugin_file), "status": "pending", "detail": f"arquivo `{plugin_file}` com estrutura inválida (esperado objeto/dicionário)"})
                 data = {}
             hooks = data.get("capabilities", {}).get("hooks", [])
+            if not isinstance(hooks, list):
+                integrations.append({"name": plugin_file.name, "type": "hook", "file": str(plugin_file), "status": "pending", "detail": f"arquivo `{plugin_file}` com `hooks` inválido (esperado lista)"})
+                hooks = []
             if isinstance(hooks, list):
                 for hook_def in hooks:
                     if not isinstance(hook_def, dict):
                         continue
                     name = str(hook_def.get("id") or "hook")
                     cmd = hook_def.get("command")
-                    if isinstance(cmd, list):
-                        parts = [str(p) for p in cmd]
-                    elif isinstance(cmd, str):
-                        try:
-                            parts = shlex.split(cmd)
-                        except Exception:
-                            parts = cmd.split()
-                    else:
-                        parts = []
-                    idx = 0
-                    while idx < len(parts) and re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*=", parts[idx]):
-                        idx += 1
+                    parts = command_parts(cmd)
+                    idx = executable_index(parts)
                     broken_reason = ""
                     if not parts:
                         broken_reason = f"hook `{name}` sem comando declarado"
@@ -196,13 +238,18 @@ def inspect_integrations(tests_state: str) -> list[dict]:
                         broken_reason = executable_problem(parts[idx], plugin_file.parent.parent)
                         if not broken_reason:
                             for part in parts[idx + 1:]:
-                                if part.endswith((".py", ".sh", ".js")) and local_target(part, plugin_file.parent.parent) is None:
-                                    broken_reason = f"script `{part}` não encontrado"
-                                    break
+                                if part.endswith((".py", ".sh", ".js")):
+                                    script_target = local_target(part, plugin_file.parent.parent)
+                                    if script_target is None:
+                                        broken_reason = f"script `{part}` não encontrado"
+                                        break
+                                    if script_target.is_symlink():
+                                        broken_reason = f"script `{part}` é symlink não auditado"
+                                        break
                     if broken_reason:
                         status, detail = "pending", f"`{name}` em `{plugin_file}`: {broken_reason}"
                     elif tests_state == "PASS":
-                        status, detail = "validated", f"`{name}` em `{plugin_file}` verificado e ativo"
+                        status, detail = "validated", f"`{name}` em `{plugin_file}` estruturalmente íntegro e suíte PASS (sem handshake dedicado)"
                     else:
                         status, detail = "configured without execution", f"`{name}` em `{plugin_file}` configurado sem execução de testes"
                     integrations.append({"name": name, "type": "hook", "file": str(plugin_file), "status": status, "detail": detail})
@@ -227,14 +274,31 @@ def inspect_integrations(tests_state: str) -> list[dict]:
                     if not cmd:
                         status, detail = "pending", f"servidor MCP `{srv_name}` sem comando declarado"
                     else:
-                        # Problema calculado antes do estado: executável local íntegro
-                        # também chega a validated/configured (o upstream deixa status
-                        # sem atribuição nesse ramo; desvio deliberado, ver E36).
-                        problem = executable_problem(str(cmd), mcp_file.parent)
+                        parts = command_parts(cmd)
+                        idx = executable_index(parts)
+                        raw_args = srv_def.get("args", []) if isinstance(srv_def, dict) else []
+                        if idx >= len(parts):
+                            problem = "comando contém apenas variáveis de ambiente"
+                        elif not isinstance(raw_args, list) or any(
+                                not isinstance(a, str) for a in raw_args):
+                            problem = "campo `args` inválido (esperado lista de strings)"
+                        else:
+                            # Problema calculado antes do estado (ver E36).
+                            problem = executable_problem(parts[idx], mcp_file.parent)
+                            if not problem:
+                                for part in parts[idx + 1:] + raw_args:
+                                    if part.endswith((".py", ".sh", ".js")):
+                                        script_target = local_target(part, mcp_file.parent)
+                                        if script_target is None:
+                                            problem = f"script `{part}` não encontrado"
+                                            break
+                                        if script_target.is_symlink():
+                                            problem = f"script `{part}` é symlink não auditado"
+                                            break
                         if problem:
                             status, detail = "pending", f"servidor MCP `{srv_name}`: {problem}"
                         elif tests_state == "PASS":
-                            status, detail = "validated", f"servidor MCP `{srv_name}` configurado e acessível (`{cmd}`)"
+                            status, detail = "validated", f"servidor MCP `{srv_name}` estruturalmente íntegro e suíte PASS (sem handshake MCP)"
                         else:
                             status, detail = "configured without execution", f"servidor MCP `{srv_name}` configurado sem teste de execução"
                     integrations.append({"name": srv_name, "type": "mcp", "file": str(mcp_file), "status": status, "detail": detail})

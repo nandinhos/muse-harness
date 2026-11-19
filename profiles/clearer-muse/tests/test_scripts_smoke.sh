@@ -286,6 +286,103 @@ if [[ "$RCG0" -eq 0 && "$RCG1" -eq 1 && "$RCG2" -eq 0 && "$RCG3" -eq 2 ]]; then
 else bad "smoke-stop-guard" "rcs=$RCG0/$RCG1/$RCG2/$RCG3 (esperado 0/1/0/2)"; fi
 rm -rf "$TSG"
 
+# --- Revisao Codex: mascara cobre URL/JWT/AWS rotulado; report nao quebra ---
+TCX="$(mktemp -d)"; TCLOG="$TCX/ev.jsonl"
+python3 "$SCR/telemetry_log.py" --file "$TCLOG" --tool muse.bash --decision info \
+  --note "url https://user:segredoURL123@example.com/x aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signaturepart" >/dev/null 2>&1
+if [[ -f "$TCLOG" ]] && ! grep -q "segredoURL123" "$TCLOG" && ! grep -q "wJalrXUtnFEMI" "$TCLOG" && ! grep -q "eyJhbGciOiJIUzI1NiJ9" "$TCLOG"; then
+  ok "smoke-telemetry-mask-url-aws-jwt"
+else bad "smoke-telemetry-mask-url-aws-jwt" "valor sensível vazou no JSONL"; fi
+cat > "$TCX/bad.jsonl" <<'JSONL'
+{"decision":"allow","tool":"x","latency_ms":true,"tokens":true,"token_source":"api"}
+{"decision":["allow"],"tool":"x"}
+{"decision":"deny","tool":"x","latency_ms":NaN,"tokens":-5,"token_source":"api"}
+{"decision":"deny","tool":["x"],"tokens":10,"token_source":["api"]}
+JSONL
+OUTBAD="$(python3 "$SCR/telemetry_report.py" "$TCX/bad.jsonl" 2>&1)"; RCBAD=$?
+if [[ "$RCBAD" -eq 0 && "$OUTBAD" == *'eventos=0 invalidos=4'* ]]; then ok "smoke-telemetry-report-malformed";
+else bad "smoke-telemetry-report-malformed" "rc=$RCBAD out=[$(echo "$OUTBAD" | head -c 300)]"; fi
+rm -rf "$TCX"
+
+# --- Revisao Codex: arbitragem do roteador privilegia o verbo principal ---
+OUTRT1="$(python3 "$SCR/route_classify.py" --task "corrigir typo na documentacao do endpoint" 2>&1)"
+OUTRT2="$(python3 "$SCR/route_classify.py" --task "explicar como funciona o cache" 2>&1)"
+if printf '%s' "$OUTRT1" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['classe']=='LOW' and d['tier']=='T1'" 2>/dev/null \
+   && printf '%s' "$OUTRT2" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['classe']=='LOW' and d['tier']=='T0'" 2>/dev/null; then
+  ok "smoke-route-main-verb"
+else bad "smoke-route-main-verb" "typo=[$OUTRT1] explicar=[$OUTRT2]"; fi
+
+# --- Revisao Codex: System One nao quebra com migracao em path+conteudo ---
+TMIG="$(mktemp -d)"
+printf 'diff --git a/migrations/001.sql b/migrations/001.sql\n--- a/migrations/001.sql\n+++ b/migrations/001.sql\n@@\n+CREATE TABLE usuarios (id int);\n' > "$TMIG/mig.diff"
+OUTMIG="$(python3 "$SCR/system_one.py" --diff-file "$TMIG/mig.diff" 2>&1)"; RCMIG=$?
+if [[ "$RCMIG" -eq 0 ]] && printf '%s' "$OUTMIG" | python3 -c "import json,sys; d=json.load(sys.stdin); q={p['id']:p for p in d['perguntas']}; assert q['toca_migracao']['resposta']=='SIM'" 2>/dev/null; then
+  ok "smoke-system-one-migration-mixed"
+else bad "smoke-system-one-migration-mixed" "rc=$RCMIG out=[$(echo "$OUTMIG" | head -c 300)]"; fi
+rm -rf "$TMIG"
+
+# --- Revisao Codex: git_inspect preserva autor/assunto com pipe ---
+TGIP="$(mktemp -d)"
+git -C "$TGIP" init -q -b dev; git -C "$TGIP" config user.name 'A|B'; git -C "$TGIP" config user.email t@t
+echo x > "$TGIP/f"; git -C "$TGIP" add .; git -C "$TGIP" commit -qm 'assunto | com pipe'
+OUTGIP="$(python3 "$SCR/git_inspect.py" --repo "$TGIP" --limit 1 2>&1)"
+if printf '%s' "$OUTGIP" | python3 -c "import json,sys; d=json.load(sys.stdin); c=d['commits'][0]; assert c['author']=='A|B' and c['subject']=='assunto | com pipe'" 2>/dev/null; then
+  ok "smoke-git-inspect-delimiters"
+else bad "smoke-git-inspect-delimiters" "out=[$OUTGIP]"; fi
+rm -rf "$TGIP"
+
+# --- Revisao Codex: sonda docker que ignora TERM e encerrada por kill-after ---
+TKILL="$(mktemp -d)"; BKILL="$(mktemp -d)"
+cat > "$BKILL/docker" <<'STUB'
+#!/usr/bin/env bash
+trap '' TERM
+sleep 6
+STUB
+chmod +x "$BKILL/docker"
+STARTK=$SECONDS
+PATH="$BKILL:$PATH" bash "$SCR/detect-project.sh" "$TKILL" >/dev/null 2>&1
+ELAPK=$((SECONDS-STARTK))
+if [[ "$ELAPK" -le 4 ]]; then ok "smoke-docker-timeout-kill-after";
+else bad "smoke-docker-timeout-kill-after" "detect levou ${ELAPK}s com sonda que ignora TERM"; fi
+rm -rf "$TKILL" "$BKILL"
+
+# --- Revisao Codex: certificado e JSON valido mesmo com aspas no comando ---
+TCERT="$(mktemp -d)"
+git -C "$TCERT" init -q -b dev; git -C "$TCERT" config user.name T; git -C "$TCERT" config user.email t@t
+mkdir -p "$TCERT/.ceh"
+printf '%s\n' '{"canonical_test_command":"printf \"ok\""}' > "$TCERT/.ceh/config.json"
+git -C "$TCERT" add .; git -C "$TCERT" commit -qm cfg
+OUTCERT="$(cd "$TCERT" && bash "$SCR/test-runner.sh" 2>&1)"; RCCERT=$?
+if [[ "$RCCERT" -eq 0 ]] && python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['command']=='printf \"ok\"' and d['normalized_runner']=='printf \"ok\"' and d['canonical_verified'] is True" "$TCERT/.ceh/last-ci-run.json" 2>/dev/null; then
+  ok "smoke-runner-cert-json-quotes"
+else bad "smoke-runner-cert-json-quotes" "rc=$RCCERT out=[$(echo "$OUTCERT" | head -c 300)] cert=[$(cat "$TCERT/.ceh/last-ci-run.json" 2>/dev/null)]"; fi
+rm -rf "$TCERT"
+
+# --- Revisao Codex: install/uninstall respeitam consentimento, CRLF e modo ---
+TINST="$(mktemp -d)"; BINST="$(mktemp -d)"; RCINST="$TINST/rc"
+cat > "$BINST/muse" <<'STUB'
+#!/usr/bin/env bash
+if [[ "${1:-} ${2:-}" == "plugins list" ]]; then echo "clearer-muse"; fi
+if [[ "${1:-} ${2:-}" == "plugins remove" ]]; then echo remove >> "$STUB_LOG"; fi
+exit 0
+STUB
+chmod +x "$BINST/muse"
+printf 'linha-original\r\n' > "$RCINST"; chmod 640 "$RCINST"
+cp "$RCINST" "$RCINST.orig"
+OUTINST="$(PATH="$BINST:$PATH" RC_FILES="$RCINST" bash "$ROOT/install.sh" --scope user </dev/null 2>&1)"; RCINST1=$?
+cr_ok=0; cmp -s "$RCINST" "$RCINST.orig" && cr_ok=1
+if [[ "$RCINST1" -eq 0 && "$cr_ok" -eq 1 && "$OUTINST" == *'nenhum rc foi alterado'* ]]; then ok "smoke-install-noninteractive-no-rc";
+else bad "smoke-install-noninteractive-no-rc" "rc=$RCINST1 igual=$cr_ok out=[$(echo "$OUTINST" | tail -c 250)]"; fi
+OUTINST2="$(PATH="$BINST:$PATH" RC_FILES="$RCINST" bash "$ROOT/install.sh" --scope user --yes </dev/null 2>&1)"; RCINST2=$?
+if [[ "$RCINST2" -eq 0 ]] && python3 -c "import os,stat,sys; d=open(sys.argv[1],'rb').read(); assert d.startswith(b'linha-original\r\n') and b'# BEGIN CLEARER-MUSE ALIASES\r\n' in d and stat.S_IMODE(os.stat(sys.argv[1]).st_mode)==0o640" "$RCINST" 2>/dev/null; then
+  ok "smoke-install-yes-crlf-mode"
+else bad "smoke-install-yes-crlf-mode" "rc=$RCINST2 out=[$(echo "$OUTINST2" | tail -c 250)]"; fi
+STUB_LOG="$TINST/stub.log"; : > "$STUB_LOG"
+OUTUN="$(STUB_LOG="$STUB_LOG" PATH="$BINST:$PATH" RC_FILES="$RCINST" bash "$ROOT/uninstall.sh" </dev/null 2>&1)"; RCUN=$?
+if [[ "$RCUN" -eq 0 && ! -s "$STUB_LOG" ]] && grep -q "BEGIN CLEARER-MUSE" "$RCINST"; then ok "smoke-uninstall-no-consent-preserva";
+else bad "smoke-uninstall-no-consent-preserva" "rc=$RCUN log=[$(cat "$STUB_LOG")] out=[$(echo "$OUTUN" | tail -c 200)]"; fi
+rm -rf "$TINST" "$BINST"
+
 echo "---"
 echo "SCRIPTS-SMOKE: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
 [[ "$FAIL" -eq 0 ]]

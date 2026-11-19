@@ -28,6 +28,16 @@ import re
 import json
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
+
+
+def _git(args, cwd=None, text=False):
+    """git com teto de 10s; timeout/erro de execucao vira returncode 124."""
+    try:
+        return subprocess.run(["git", *args], cwd=cwd, capture_output=True,
+                              text=text, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return SimpleNamespace(returncode=124, stdout="" if text else b"")
 
 def audit_ceh(repo_root):
     """Layout CEH/Antigravity: 7 checagens originais, semântica inalterada."""
@@ -115,12 +125,11 @@ def audit_ceh(repo_root):
                 if not re.fullmatch(r"[0-9a-f]{7,40}", commit_hash):
                     errors.append(f"Achado {r_id} não possui hash de commit válido na coluna de implementação.")
                 else:
-                    is_shallow = subprocess.run(["git", "rev-parse", "--is-shallow-repository"], cwd=repo_root, capture_output=True, text=True).stdout.strip() == "true"
+                    is_shallow = _git(["rev-parse", "--is-shallow-repository"], cwd=repo_root, text=True).stdout.strip() == "true"
                     if not is_shallow:
-                        commit_check = subprocess.run(
-                            ["git", "rev-parse", "--verify", f"{commit_hash}^{{commit}}"],
+                        commit_check = _git(
+                            ["rev-parse", "--verify", f"{commit_hash}^{{commit}}"],
                             cwd=repo_root,
-                            capture_output=True,
                         )
                         if commit_check.returncode != 0:
                             errors.append(f"Commit da tabela do achado {r_id} não existe no histórico local: {commit_hash}.")
@@ -190,14 +199,14 @@ def audit_ceh(repo_root):
     commits_to_check = set(re.findall(r"\b([0-9a-f]{7,40})\b", plano_text))
     # Filtra apenas hashes citados em contexto de commit
     commit_refs = re.findall(r"(?:commit|HEAD)\s+[`']?([0-9a-f]{7,40})[`']?", plano_text)
-    is_shallow = subprocess.run(["git", "rev-parse", "--is-shallow-repository"], cwd=repo_root, capture_output=True, text=True).stdout.strip() == "true"
+    is_shallow = _git(["rev-parse", "--is-shallow-repository"], cwd=repo_root, text=True).stdout.strip() == "true"
     if is_shallow:
         print("  • Repositório raso detectado (shallow clone de CI); validação de commits ancestrais ignorada com segurança.")
         checks_passed += 1
     else:
         missing_commits = []
         for c in commit_refs:
-            res = subprocess.run(["git", "rev-parse", "--verify", f"{c}^{{commit}}"], cwd=repo_root, capture_output=True)
+            res = _git(["rev-parse", "--verify", f"{c}^{{commit}}"], cwd=repo_root)
             if res.returncode != 0:
                 missing_commits.append(c)
 
@@ -312,8 +321,8 @@ def audit_muse(repo_root):
         passed += 1
 
     print("[3/6] Commits citados existem no Git local...")
-    shallow = subprocess.run(["git", "rev-parse", "--is-shallow-repository"],
-                             cwd=repo_root, capture_output=True, text=True).stdout.strip() == "true"
+    shallow = _git(["rev-parse", "--is-shallow-repository"],
+                   cwd=repo_root, text=True).stdout.strip() == "true"
     if shallow:
         print("  • Clone raso (CI); commits ancestrais ignorados com segurança.")
         passed += 1
@@ -321,9 +330,9 @@ def audit_muse(repo_root):
         refs = set()
         for md in live:
             refs.update(re.findall(r"(?:commit|HEAD)\s+[`']?([0-9a-f]{7,40})[`']?", _read(md)))
-        missing = [c for c in refs if subprocess.run(
-            ["git", "rev-parse", "--verify", f"{c}^{{commit}}"],
-            cwd=repo_root, capture_output=True).returncode != 0]
+        missing = [c for c in refs if _git(
+            ["rev-parse", "--verify", f"{c}^{{commit}}"],
+            cwd=repo_root).returncode != 0]
         if missing:
             errors += [f"Commit citado inexistente no histórico local: {c}" for c in missing]
         else:
@@ -397,8 +406,7 @@ def audit_muse(repo_root):
 def _repo_root(argv):
     if len(argv) > 1:
         return Path(argv[1]).resolve()
-    top = subprocess.run(["git", "rev-parse", "--show-toplevel"],
-                         capture_output=True, text=True)
+    top = _git(["rev-parse", "--show-toplevel"], text=True)
     if top.returncode == 0 and top.stdout.strip():
         return Path(top.stdout.strip())
     return Path(__file__).resolve().parents[3]
