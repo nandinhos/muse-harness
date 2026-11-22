@@ -19,6 +19,8 @@ fechamento de etapa / `/token-report`, nunca no caminho quente.
 
 Uso: python3 scripts/context-guard.py --session <session.jsonl> [--json]
      [--warn-input N] [--block-input N] [--warn-steps N] [--block-steps N]
+     python3 scripts/context-guard.py --last-input N --steps-count N [--json]
+       (modo quente/sintetico: classifica sem ler sessao, p/ checagem a cada N tools)
 Exits: 0 OK; 1 WARN; 2 BLOCK ou sessão ilegível/sem eventos (fail-closed).
 """
 
@@ -47,13 +49,43 @@ def classify(last_input: int, steps: int, warn_input: int, block_input: int,
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="context-guard.py")
-    ap.add_argument("--session", required=True)
+    ap.add_argument("--session")
+    ap.add_argument("--last-input", type=int)
+    ap.add_argument("--steps-count", type=int)
     ap.add_argument("--warn-input", type=int, default=150_000)
     ap.add_argument("--block-input", type=int, default=300_000)
     ap.add_argument("--warn-steps", type=int, default=80)
     ap.add_argument("--block-steps", type=int, default=200)
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
+
+    # Caminho quente: numeros ja medidos (session_cost/usage) sem reler sessao.
+    if args.last_input is not None and args.steps_count is not None:
+        verdict = classify(args.last_input, args.steps_count,
+                           args.warn_input, args.block_input,
+                           args.warn_steps, args.block_steps)
+        result = {
+            "verdict": verdict, "steps": args.steps_count,
+            "last_input_step": args.last_input,
+            "max_input_step": args.last_input,
+            "thresholds": {
+                "warn_input": args.warn_input,
+                "block_input": args.block_input,
+                "warn_steps": args.warn_steps,
+                "block_steps": args.block_steps,
+            },
+            "real_cost": None, "cache_ratio": None, "mode": "hot",
+        }
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+        else:
+            print(f"[CONTEXT-GUARD] {verdict} steps={result['steps']} "
+                  f"last_input={result['last_input_step']}")
+        return {"OK": 0, "WARN": 1, "BLOCK": 2}[verdict]
+    if not args.session:
+        print("[CONTEXT-GUARD] --session obrigatoria sem --last-input/"
+              "--steps-count (fail-closed)", file=sys.stderr)
+        return 2
 
     if aggregate is None or collect_paths is None:
         print("[CONTEXT-GUARD] session_cost indisponivel (fail-closed)",

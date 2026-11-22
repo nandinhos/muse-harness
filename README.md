@@ -39,18 +39,21 @@ de resposta com evidências e economia de tokens — instalável em qualquer pro
 | 6 | Verificação independente | Testes do repo + `diff-audit` do próprio diff antes de entregar |
 | 7 | Melhoria contínua como rotina | Falhas viram gates permanentes (ADRs, hooks, regressões) |
 
-### O profile `clearer-muse` v0.12.1
+### O profile `clearer-muse` v0.13.0
 
 | Capacidade | Estado |
 |------------|--------|
-| Dispatcher `clearer` (ciclo + Risk Dial + contrato) | ativo |
+| Loader zero-prompt (só hook `safety-gate`; `skills=[]`, `commands=[]` no manifest) | ativo |
+| Dispatch determinístico (`scripts/ceh-dispatch.py`: ambiente + Risk Dial + rota por código) | ativo |
 | Addon `token-economy` (tetos 8k/4k/2k/1k, compressão, higiene) | ativo |
 | Guarda de contexto (`session_cost.py` custo real, `context-guard.py` WARN/BLOCK, compressão 16k chars) | ativo |
+| Orçamento de Input (`input-budget.py` teto 22.798B/turno, Elo3 advisory no `safety-gate`, ADR-009) | ativo |
 | Addon `code-minimalism` (Escada Ponytail v5, marcação `shortcut:`) | opt-in |
 | Addon `debugging` (5 gates bloqueantes, relatório lesson-ready) | opt-in |
 | Hook `safety-gate` (`PreToolUse`, veredito vinculante) | ativo |
 | Motor CEH v2.3.1 vendorizado (`hooks/vendor/ceh/`, ref `4db20b7`, sha em `VENDOR.md`) | ativo |
-| 16 skills (incl. `clearer-bugfix`, `conselho-seniores`, `clearer-orchestration` opt-in) | ativo |
+| 16 skills em disco como referência (fora do loader; leitura explícita de 1 arquivo via dispatch/índice) | sob demanda |
+| Índice tagueado (`index.json`/`INDEX.md`, fonte filesystem via `scripts/build-index.py`; nada no loader) | ativo |
 | Suíte do profile 9/9 + smoke-eval 16/16 (`tests/run-all-tests.sh`) | ativo |
 | Profile pessoal `muse-ceh` v0.2.1 (dispatcher, sem hook próprio) | ativo |
 | Trava Pre-Push CI Gate (tolerância zero + Certificado de Voo) | ativo |
@@ -75,7 +78,7 @@ profiles/clearer-muse/        # cópia canônica: skills, commands, hooks, scrip
     evidence_report.py,git_inspect.py,heartbeat.sh,preflight.sh,setup-branches.sh,
     route_classify.py,stop-guard.py,system_one.py,task-monitor.sh,telemetry_log.py,
     telemetry_report.py,test-runner.sh,token-budget.py,session_cost.py,
-    context-guard.py}                                                # 24 arquivos
+    context-guard.py,build-index.py,ceh-dispatch.py,input-budget.py}  # 27 arquivos
   tests/{run-all-tests.sh + 8 suítes de contrato/regressão}
 profiles/muse-ceh/              # dispatcher pessoal v0.2.1 (skill + comando + teste, sem hook)
 docs/CREATE-PROFILE.md        # guia: criar um profile harness do zero
@@ -144,17 +147,18 @@ evidence-backed response contract, and token economy — installable in any proj
 | 6 | Independent verification | Repo tests + self `diff-audit` before delivery |
 | 7 | Continuous improvement as routine | Failures become permanent gates (ADRs, hooks, regressions) |
 
-### The `clearer-muse` profile v0.12.1
+### The `clearer-muse` profile v0.13.0
 
 | Capability | Status |
 |------------|--------|
-| `clearer` dispatcher (cycle + Risk Dial + contract) | enabled |
+| Zero-prompt loader (only `safety-gate` hook; `skills=[]`, `commands=[]`) | enabled |
+| Deterministic dispatch (`scripts/ceh-dispatch.py`: env + Risk Dial + route in code) | enabled |
 | `token-economy` addon (8k/4k/2k/1k budgets, compression, hygiene) | enabled |
 | `code-minimalism` addon (Ponytail v5 ladder, `shortcut:` marks) | opt-in |
 | `debugging` addon (5 blocking gates, lesson-ready report) | opt-in |
 | `safety-gate` hook (`PreToolUse`, binding verdict) | enabled |
 | Vendored CEH v2.3.1 engine (`hooks/vendor/ceh/`, ref `4db20b7`, sha in `VENDOR.md`) | enabled |
-| 16 skills (incl. opt-in `clearer-bugfix`, `conselho-seniores`, `clearer-orchestration`) | enabled |
+| 16 skills on disk as reference (outside the loader; explicit 1-file read via dispatch/index) | on demand |
 | Profile suite 9/9 + smoke-eval 16/16 (`tests/run-all-tests.sh`) | enabled |
 | Personal `muse-ceh` v0.2.1 profile (dispatcher, no own hook) | enabled |
 | Pre-Push CI Gate (zero tolerance + Flight Certificate) | enabled |

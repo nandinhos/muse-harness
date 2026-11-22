@@ -417,6 +417,60 @@ else bad "smoke-compress-max-chars" "rc=$RCCMP bytes=$CMPBYTES"; fi
 bash "$SCR/compress-output.sh" bash -c "exit 3" >/dev/null 2>&1; RCEXIT=$?
 if [[ "$RCEXIT" -eq 3 ]]; then ok "smoke-compress-exit-preserved"; else bad "smoke-compress-exit-preserved" "rc=$RCEXIT (esperado 3)"; fi
 
+# --- Loader zero-prompt: so hook de codigo, infra deterministica, indice fresco ---
+ROOTP="$ROOT/profiles/clearer-muse"
+OUTDSP="$(python3 "$SCR/ceh-dispatch.py" --task "corrigir bug de autenticacao em producao" --cwd "$ROOT" 2>&1)"; RCDSP=$?
+OUTDSP2="$(python3 "$SCR/ceh-dispatch.py" --task "corrigir typo no readme" --cwd "$ROOT" 2>&1)"
+if python3 -c "
+import json,sys
+d=json.load(open(sys.argv[1])); caps=d['capabilities']
+assert caps['skills']==[] and caps['commands']==[], 'prompt registrado no loader'
+assert caps['mcpServers']==[] and caps['reminders']==[], 'prompt/mcp no loader'
+assert [h.get('id') for h in caps['hooks']]==['safety-gate'], 'loader sem unico hook'
+assert caps['hooks'][0].get('event')=='PreToolUse', 'hook nao e PreToolUse'
+idx=json.load(open(sys.argv[2]))
+assert all(not i['residente'] for i in idx['itens']), 'indice com residente'
+bug=[i for i in idx['itens'] if 'bug' in i['tags']]
+assert any(i['id']=='clearer-bugfix' for i in bug), 'tag bug sem clearer-bugfix'
+hi=json.loads(sys.argv[3]); lo=json.loads(sys.argv[4])
+assert hi['risk']=='HIGH' and hi['tier']=='T4' and hi['rota']=='clearer-bugfix', hi
+assert hi['loader_prompt'] is False and hi['guardrail']=='safety-gate:PreToolUse', hi
+assert lo['risk']=='LOW' and lo['rota']=='clearer', lo
+assert lo['ambiente']=='nao-verificado', lo
+assert hi['ambiente']!='nao-verificado', hi
+" "$ROOTP/.muse-plugin/plugin.json" "$ROOTP/index.json" "$OUTDSP" "$OUTDSP2" 2>/dev/null \
+   && [[ "$RCDSP" -eq 0 ]] \
+   && python3 "$SCR/build-index.py" --check >/dev/null 2>&1; then
+  ok "smoke-loader-zero-prompt"
+else bad "smoke-loader-zero-prompt" "loader com prompt, dispatch errado ou indice stale: hi=[$OUTDSP] lo=[$OUTDSP2]"; fi
+
+# --- preflight: binario presente mas --version falhando nao mata (shim WSL) ---
+FAKEBIN="$(mktemp -d)"
+printf '#!/bin/sh\nexit 1\n' > "$FAKEBIN/docker"; chmod +x "$FAKEBIN/docker"
+OUTPF="$(PATH="$FAKEBIN:$PATH" bash "$SCR/preflight.sh" 2>&1)"; RCPF=$?
+rm -rf "$FAKEBIN"
+if [[ "$RCPF" -eq 0 && "$OUTPF" == *"PRESENT BUT NOT RESPONDING"* ]]; then ok "smoke-preflight-broken-bin";
+else bad "smoke-preflight-broken-bin" "rc=$RCPF"; fi
+
+# --- input-budget: teto RULE-OPT-01 ---
+python3 "$SCR/input-budget.py" --files "$HOME/.claude/CLAUDE.md" --json >/dev/null 2>&1; RCBUD0=$?
+python3 "$SCR/input-budget.py" --files "$HOME/.claude/CLAUDE.md" --ceiling-total 100 --json >/dev/null 2>&1; RCBUD1=$?
+if [[ "$RCBUD0" -eq 0 && "$RCBUD1" -eq 1 ]]; then ok "smoke-input-budget";
+else bad "smoke-input-budget" "rc ok/over=$RCBUD0/$RCBUD1 (esperado 0/1)"; fi
+
+# --- safety-gate Elo3 advisory: verboso avisa sem negar (12 casos no runner) ---
+OUTELO="$(python3 "$ROOT/profiles/clearer-muse/hooks/safety-gate.py" "git log" 2>&1 >/dev/null)"
+OUTELO2="$(python3 "$ROOT/profiles/clearer-muse/hooks/safety-gate.py" "git status" 2>&1 >/dev/null)"
+if [[ "$OUTELO" == *"ELO3-ADVISORY"* && "$OUTELO2" != *"ELO3-ADVISORY"* ]]; then ok "smoke-elo3-advisory";
+else bad "smoke-elo3-advisory" "log=[$OUTELO] status=[$OUTELO2]"; fi
+
+# --- context-guard caminho quente (sem ler sessao) ---
+python3 "$SCR/context-guard.py" --last-input 50000 --steps-count 10 --json >/dev/null 2>&1; RCHOT0=$?
+python3 "$SCR/context-guard.py" --last-input 160000 --steps-count 10 --json >/dev/null 2>&1; RCHOT1=$?
+python3 "$SCR/context-guard.py" --last-input 310000 --steps-count 10 --json >/dev/null 2>&1; RCHOT2=$?
+if [[ "$RCHOT0" -eq 0 && "$RCHOT1" -eq 1 && "$RCHOT2" -eq 2 ]]; then ok "smoke-context-guard-hot";
+else bad "smoke-context-guard-hot" "rc ok/warn/block=$RCHOT0/$RCHOT1/$RCHOT2 (esperado 0/1/2)"; fi
+
 echo "---"
 echo "SCRIPTS-SMOKE: PASS=$PASS FAIL=$FAIL$([ -n "$FAILED_LIST" ] && echo " [$FAILED_LIST]" || true)"
 [[ "$FAIL" -eq 0 ]]

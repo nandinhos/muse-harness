@@ -87,6 +87,31 @@ def _emit(decision: str, env: str, reason: str) -> int:
     return 0
 
 
+_ELO3_LOG_RE = re.compile(r"\bgit\s+log\b")
+
+
+def _elo3_advisory(cmd: str) -> str:
+    """Elo3 advisory (sem deny): volume bruto alto pede compressao/inspecao.
+
+    Portado do enhancements (router por V_raw, nao por S_cmd): o hook Muse
+    so decide allow/block, entao o overwrite deterministico vira aviso na
+    trilha — bloquear custaria deny-and-retry (+18,9% medido no benchmark).
+    """
+    low = cmd.lower()
+    if _ELO3_LOG_RE.search(low) and not re.search(
+            r"(-n\s*\d+|--max-count|-\d+\b|--oneline\s+-\d)", low):
+        return (" [ELO3-ADVISORY: git log sem limite — prefira "
+                "git_inspect.py --limit ou compress-output.sh]")
+    if re.search(r"\bgit\s+diff\b", low) and "--stat" not in low:
+        return (" [ELO3-ADVISORY: git diff sem --stat — prefira "
+                "--stat ou canonical-diff.sh]")
+    if re.search(r"(?:^|[;&|]\s*)find\s+(?:/|~)", low) \
+            and "-maxdepth" not in low:
+        return (" [ELO3-ADVISORY: find amplo sem -maxdepth — "
+                "delimite a busca]")
+    return ""
+
+
 def _warn_reason(reason: str) -> str:
     return (
         "exige 2 alertas (1/2 impacto, 2/2 backup+rollback): " + _first_line(reason)
@@ -385,6 +410,8 @@ def _handle_native(payload: dict[str, Any]) -> int:
                 req.command, req.explicit_env, cwd, False)
             dec = Decision(decision=d, reason=r, environment=e)
     reason = _warn_reason(dec.reason) if dec.decision == "ask" else dec.reason
+    if dec.decision == "allow" and req.command:
+        reason += _elo3_advisory(req.command)
     return _emit(dec.decision, dec.environment, reason)
 
 
@@ -467,6 +494,8 @@ def _legacy_terminal(cmd: str, explicit_env: str | None, eval_cwd: Path,
         cmd, explicit_env, eval_cwd, force_deny_push)
     if decision == "ask":
         reason = _warn_reason(reason)
+    if decision == "allow":
+        reason += _elo3_advisory(cmd)
     return _emit(decision, env, reason)
 
 

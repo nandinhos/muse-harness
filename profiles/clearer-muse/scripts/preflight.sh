@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# preflight.sh - Pre-execution sanity and safety checker for CLEARER Harness
+# preflight.sh - Inspecao SOB DEMANDA (legado): nunca executado na abertura
+# da sessao. Ambiente e guardrails sao resolvidos pelo hook safety-gate
+# (PreToolUse); use este script apenas quando uma decisao exige inspecao extra.
 # ==============================================================================
 set -euo pipefail
 
@@ -34,8 +36,14 @@ echo ""
 echo "[TOOLS] Verifying runtime environment:"
 for cmd in git bash python3 node npm composer docker; do
     if command -v "$cmd" >/dev/null 2>&1; then
-        VERSION=$("$cmd" --version 2>&1 | head -n 1)
-        echo "  - $cmd: AVAILABLE ($VERSION)"
+        # Binario presente nao garante resposta (ex.: shim Docker sem
+        # integracao WSL sai 1): sonda nao pode matar o preflight.
+        VERSION=$("$cmd" --version 2>&1 | head -n 1) || VERSION=""
+        if [[ -n "$VERSION" ]]; then
+            echo "  - $cmd: AVAILABLE ($VERSION)"
+        else
+            echo "  - $cmd: PRESENT BUT NOT RESPONDING (--version falhou)"
+        fi
     else
         echo "  - $cmd: NOT INSTALLED"
     fi

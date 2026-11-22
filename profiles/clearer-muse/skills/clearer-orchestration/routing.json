@@ -35,6 +35,22 @@
     "string de mensagem", "linha de log", "bump", "caso simples",
     "versao patch", "versao no readme"
   ],
+  "rotas": [
+    {"skill": "clearer-bugfix", "arquivo": "skills/clearer-bugfix/SKILL.md", "sinais": ["bug", "erro", "regressao", "falha", "debug", "quebrou", "exception"]},
+    {"skill": "clearer-review", "arquivo": "skills/clearer-review/SKILL.md", "sinais": ["review", "revisar", "revisao", "diff"]},
+    {"skill": "clearer-audit", "arquivo": "skills/clearer-audit/SKILL.md", "sinais": ["auditoria", "auditar", "claims"]},
+    {"skill": "clearer-map", "arquivo": "skills/clearer-map/SKILL.md", "sinais": ["mapa", "mapear", "codebase", "explorar"]},
+    {"skill": "clearer-refactor", "arquivo": "skills/clearer-refactor/SKILL.md", "sinais": ["refactor", "refator"]},
+    {"skill": "clearer-test", "arquivo": "skills/clearer-test/SKILL.md", "sinais": ["teste", "testar", "testes"]},
+    {"skill": "learned-lesson", "arquivo": "skills/learned-lesson/SKILL.md", "sinais": ["licao", "aprendizado", "memoria tecnica"]},
+    {"skill": "conselho-seniores", "arquivo": "skills/conselho-seniores/SKILL.md", "sinais": ["banca", "conselho", "seniores"]},
+    {"skill": "token-economy", "arquivo": "skills/token-economy/SKILL.md", "sinais": ["token", "economia de contexto", "custo de contexto"]},
+    {"skill": "code-minimalism", "arquivo": "skills/code-minimalism/SKILL.md", "sinais": ["minimalis", "diff minimo"]},
+    {"skill": "clearer-orchestration", "arquivo": "skills/clearer-orchestration/SKILL.md", "sinais": ["orquestra", "subagente", "tiers"]},
+    {"skill": "clearer-rules", "arquivo": "skills/clearer-rules/SKILL.md", "sinais": ["regra", "normativo", "ci gate"]},
+    {"skill": "clearer-feature", "arquivo": "skills/clearer-feature/SKILL.md", "sinais": ["implementar", "feature", "funcionalidade", "endpoint", "crud", "adicionar", "criar"]},
+    {"skill": "clearer", "arquivo": "skills/clearer/SKILL.md", "sinais": []}
+  ],
   "replanning_triggers": [
     "teste vermelho apos 1 ciclo de auto-reparo",
     "sinal HIGH descoberto durante execucao de classe menor",

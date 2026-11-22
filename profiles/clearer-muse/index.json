@@ -1,0 +1,640 @@
+{
+  "versao": 1,
+  "gerado_por": "scripts/build-index.py (nao editar a mao; rode o gerador)",
+  "regra": "loader com zero prompt (so hook); residente=false para tudo; ler 1 arquivo por vez via tags",
+  "itens": [
+    {
+      "id": "clearer",
+      "tipo": "comando",
+      "caminho": "commands/clearer.md",
+      "tags": [
+        "dispatcher",
+        "ciclo",
+        "risk-dial",
+        "entrada"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 1405,
+      "descricao": "Executa o ciclo CLEARER sobre o escopo informado"
+    },
+    {
+      "id": "token-report",
+      "tipo": "comando",
+      "caminho": "commands/token-report.md",
+      "tags": [
+        "comando",
+        "tokens",
+        "custo",
+        "relatorio"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 1272,
+      "descricao": "Emite relatorio estimado de gasto de tokens da tarefa"
+    },
+    {
+      "id": "canonical-diff",
+      "tipo": "ferramenta",
+      "caminho": "scripts/canonical-diff.sh",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 928,
+      "descricao": ""
+    },
+    {
+      "id": "ceh-dispatch",
+      "tipo": "ferramenta",
+      "caminho": "scripts/ceh-dispatch.py",
+      "tags": [
+        "ferramenta",
+        "dispatch",
+        "risk-dial",
+        "ambiente",
+        "infra"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 4742,
+      "descricao": ""
+    },
+    {
+      "id": "ceh-help",
+      "tipo": "ferramenta",
+      "caminho": "scripts/ceh-help.sh",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 4186,
+      "descricao": ""
+    },
+    {
+      "id": "compress-output",
+      "tipo": "ferramenta",
+      "caminho": "scripts/compress-output.sh",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 1703,
+      "descricao": ""
+    },
+    {
+      "id": "conselho-seniores",
+      "tipo": "ferramenta",
+      "caminho": "scripts/conselho-seniores.sh",
+      "tags": [
+        "banca",
+        "multi-modelo",
+        "decisao",
+        "opt-in"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 18619,
+      "descricao": ""
+    },
+    {
+      "id": "context-guard",
+      "tipo": "ferramenta",
+      "caminho": "scripts/context-guard.py",
+      "tags": [
+        "ferramenta",
+        "tokens",
+        "contexto",
+        "guarda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 6134,
+      "descricao": ""
+    },
+    {
+      "id": "detect-project",
+      "tipo": "ferramenta",
+      "caminho": "scripts/detect-project.sh",
+      "tags": [
+        "ferramenta",
+        "stack",
+        "ambiente",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 3885,
+      "descricao": ""
+    },
+    {
+      "id": "diff-audit",
+      "tipo": "ferramenta",
+      "caminho": "scripts/diff-audit.sh",
+      "tags": [
+        "ferramenta",
+        "diff",
+        "review"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 1147,
+      "descricao": ""
+    },
+    {
+      "id": "doc-audit",
+      "tipo": "ferramenta",
+      "caminho": "scripts/doc-audit.py",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 20734,
+      "descricao": ""
+    },
+    {
+      "id": "doc-audit",
+      "tipo": "ferramenta",
+      "caminho": "scripts/doc-audit.sh",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 429,
+      "descricao": ""
+    },
+    {
+      "id": "evidence-report",
+      "tipo": "ferramenta",
+      "caminho": "scripts/evidence-report.sh",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 536,
+      "descricao": ""
+    },
+    {
+      "id": "evidence_report",
+      "tipo": "ferramenta",
+      "caminho": "scripts/evidence_report.py",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 26729,
+      "descricao": ""
+    },
+    {
+      "id": "git_inspect",
+      "tipo": "ferramenta",
+      "caminho": "scripts/git_inspect.py",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 2483,
+      "descricao": ""
+    },
+    {
+      "id": "heartbeat",
+      "tipo": "ferramenta",
+      "caminho": "scripts/heartbeat.sh",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 1294,
+      "descricao": ""
+    },
+    {
+      "id": "input-budget",
+      "tipo": "ferramenta",
+      "caminho": "scripts/input-budget.py",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 2998,
+      "descricao": ""
+    },
+    {
+      "id": "preflight",
+      "tipo": "ferramenta",
+      "caminho": "scripts/preflight.sh",
+      "tags": [
+        "ferramenta",
+        "inspecao",
+        "sob-demanda",
+        "legado"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 2118,
+      "descricao": ""
+    },
+    {
+      "id": "route_classify",
+      "tipo": "ferramenta",
+      "caminho": "scripts/route_classify.py",
+      "tags": [
+        "ferramenta",
+        "orquestracao",
+        "tiers",
+        "shadow"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 4195,
+      "descricao": ""
+    },
+    {
+      "id": "session_cost",
+      "tipo": "ferramenta",
+      "caminho": "scripts/session_cost.py",
+      "tags": [
+        "ferramenta",
+        "tokens",
+        "custo",
+        "sessao"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 5807,
+      "descricao": ""
+    },
+    {
+      "id": "setup-branches",
+      "tipo": "ferramenta",
+      "caminho": "scripts/setup-branches.sh",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 6658,
+      "descricao": ""
+    },
+    {
+      "id": "stop-guard",
+      "tipo": "ferramenta",
+      "caminho": "scripts/stop-guard.py",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 2536,
+      "descricao": ""
+    },
+    {
+      "id": "system_one",
+      "tipo": "ferramenta",
+      "caminho": "scripts/system_one.py",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 6659,
+      "descricao": ""
+    },
+    {
+      "id": "task-monitor",
+      "tipo": "ferramenta",
+      "caminho": "scripts/task-monitor.sh",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 3572,
+      "descricao": ""
+    },
+    {
+      "id": "telemetry_log",
+      "tipo": "ferramenta",
+      "caminho": "scripts/telemetry_log.py",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 5044,
+      "descricao": ""
+    },
+    {
+      "id": "telemetry_report",
+      "tipo": "ferramenta",
+      "caminho": "scripts/telemetry_report.py",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 3640,
+      "descricao": ""
+    },
+    {
+      "id": "test-runner",
+      "tipo": "ferramenta",
+      "caminho": "scripts/test-runner.sh",
+      "tags": [
+        "ferramenta",
+        "teste",
+        "canonico"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 8009,
+      "descricao": ""
+    },
+    {
+      "id": "token-budget",
+      "tipo": "ferramenta",
+      "caminho": "scripts/token-budget.py",
+      "tags": [
+        "ferramenta",
+        "sob-demanda"
+      ],
+      "acionamento": "sob-demanda",
+      "residente": false,
+      "bytes": 1580,
+      "descricao": ""
+    },
+    {
+      "id": "safety-gate",
+      "tipo": "hook",
+      "caminho": "hooks/safety-gate.py",
+      "tags": [
+        "guardrail",
+        "seguranca",
+        "ambiente",
+        "pre-tool-use"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 25216,
+      "descricao": "Guardrail PreToolUse por ambiente (unico item do loader)."
+    },
+    {
+      "id": "clearer",
+      "tipo": "skill",
+      "caminho": "skills/clearer/SKILL.md",
+      "tags": [
+        "dispatcher",
+        "ciclo",
+        "risk-dial",
+        "entrada"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 7578,
+      "descricao": "Dispatcher do CLEARER Engineering Harness no Muse. Classifica ambiente e Risk Dial, roteia a tarefa pelo ciclo CLEARER e exige contrato de resposta com evidencias."
+    },
+    {
+      "id": "clearer-adhd",
+      "tipo": "skill",
+      "caminho": "skills/clearer-adhd/SKILL.md",
+      "tags": [
+        "hiperfoco",
+        "resposta-direta",
+        "opt-in"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 1709,
+      "descricao": "Modo Hiperfoco e Ponytail UX (densidade máxima, 1 ação imediata, 10 heurísticas). Portado de clearer-engineering/skills/clearer-adhd."
+    },
+    {
+      "id": "clearer-audit",
+      "tipo": "skill",
+      "caminho": "skills/clearer-audit/SKILL.md",
+      "tags": [
+        "auditoria",
+        "claims",
+        "evidencia"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 2592,
+      "descricao": "Auditoria formal de claims vs evidências (SUPPORTED/PARTIALLY/UNSUPPORTED). Portado de clearer-engineering/skills/clearer-audit."
+    },
+    {
+      "id": "clearer-bugfix",
+      "tipo": "skill",
+      "caminho": "skills/clearer-bugfix/SKILL.md",
+      "tags": [
+        "bug",
+        "erro",
+        "regressao",
+        "debug"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 12069,
+      "descricao": ">-"
+    },
+    {
+      "id": "clearer-feature",
+      "tipo": "skill",
+      "caminho": "skills/clearer-feature/SKILL.md",
+      "tags": [
+        "feature",
+        "funcionalidade",
+        "implementacao"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 2266,
+      "descricao": "Implementação de funcionalidade pelo protocolo CLEARER (INSPECT→REQUIREMENTS→IMPACT→PLAN→IMPLEMENT→TEST→REVIEW→AUDIT). Portado de clearer-engineering/skills/clearer-feature."
+    },
+    {
+      "id": "clearer-map",
+      "tipo": "skill",
+      "caminho": "skills/clearer-map/SKILL.md",
+      "tags": [
+        "mapa",
+        "codebase",
+        "read-only",
+        "exploracao"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 1185,
+      "descricao": "Mapeamento técnico read-only do codebase (stack, módulos, dados, riscos). Portado de clearer-engineering/skills/clearer-map."
+    },
+    {
+      "id": "clearer-orchestration",
+      "tipo": "skill",
+      "caminho": "skills/clearer-orchestration/SKILL.md",
+      "tags": [
+        "orquestracao",
+        "tiers",
+        "roteamento",
+        "subagentes"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 4742,
+      "descricao": "Roteamento por tiers de modelo do CLEARER (shadow). Classifica a tarefa pelo Risk Dial em T0-T4, registra o palpite na telemetria e define gates de re-planejamento; HIGH nunca rebaixa de T4."
+    },
+    {
+      "id": "clearer-refactor",
+      "tipo": "skill",
+      "caminho": "skills/clearer-refactor/SKILL.md",
+      "tags": [
+        "refactor",
+        "refatoracao",
+        "sem-mudar-comportamento"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 1349,
+      "descricao": "Refatoração segura pelo CLEARER (baseline verde→refactor→re-run→diff-audit). Portado de clearer-engineering/skills/clearer-refactor."
+    },
+    {
+      "id": "clearer-review",
+      "tipo": "skill",
+      "caminho": "skills/clearer-review/SKILL.md",
+      "tags": [
+        "review",
+        "revisao",
+        "diff",
+        "adversarial"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 4396,
+      "descricao": "Revisão adversarial de diff (6+1 checks atômicos, severidades BLOCKER→INFO). Portado de clearer-engineering/skills/clearer-review."
+    },
+    {
+      "id": "clearer-rules",
+      "tipo": "skill",
+      "caminho": "skills/clearer-rules/SKILL.md",
+      "tags": [
+        "regras",
+        "normativo",
+        "ambiente",
+        "ci"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 7397,
+      "descricao": "Regras nucleares do CEH no Muse (ambientes, CI gate, branches, Ponytail, System One, handoffs). Consolida clearer-engineering/rules/."
+    },
+    {
+      "id": "clearer-test",
+      "tipo": "skill",
+      "caminho": "skills/clearer-test/SKILL.md",
+      "tags": [
+        "teste",
+        "test",
+        "execucao-auditavel"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 1242,
+      "descricao": "Execução determinística de testes com contrato auditável (COMMAND/EXIT/STATUS). Portado de clearer-engineering/skills/clearer-test."
+    },
+    {
+      "id": "code-minimalism",
+      "tipo": "skill",
+      "caminho": "skills/code-minimalism/SKILL.md",
+      "tags": [
+        "minimalismo",
+        "diff-minimo",
+        "opt-in"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 1484,
+      "descricao": "Addon opt-in de minimalismo de codigo (ordens de preferencia estilo-ponytail). Gatilho proprio; desligado por padrao; nunca altera o ciclo do dispatcher clearer."
+    },
+    {
+      "id": "conselho-seniores",
+      "tipo": "skill",
+      "caminho": "skills/conselho-seniores/SKILL.md",
+      "tags": [
+        "banca",
+        "multi-modelo",
+        "decisao",
+        "opt-in"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 3860,
+      "descricao": ">-"
+    },
+    {
+      "id": "debugging",
+      "tipo": "skill",
+      "caminho": "skills/debugging/SKILL.md",
+      "tags": [
+        "bug",
+        "erro",
+        "regressao",
+        "debug"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 9959,
+      "descricao": "Addon opt-in de debugging determinístico (5 gates bloqueantes, relatório lesson-ready). Gatilho próprio: bug, erro, regressão. Promovido de skill de usuário para o harness."
+    },
+    {
+      "id": "learned-lesson",
+      "tipo": "skill",
+      "caminho": "skills/learned-lesson/SKILL.md",
+      "tags": [
+        "licao",
+        "memoria",
+        "aprendizado"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 1676,
+      "descricao": "Extração e persistência de lições (error/lesson/best-practice, contrato canônico). Portado de clearer-engineering/skills/learned-lesson."
+    },
+    {
+      "id": "token-economy",
+      "tipo": "skill",
+      "caminho": "skills/token-economy/SKILL.md",
+      "tags": [
+        "tokens",
+        "economia",
+        "contexto",
+        "custo"
+      ],
+      "acionamento": "sob-demanda-arquivo",
+      "residente": false,
+      "bytes": 4201,
+      "descricao": "Addon de gestao de tokens do harness. Aplica orcamento por artefato, compressao de saidas verbosas e higiene de contexto; usa rtk quando disponivel, com fallback nativo."
+    }
+  ]
+}

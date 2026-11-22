@@ -10,9 +10,14 @@ Portado de `antigravity-clearer-engineering-harness` (CEH **v2.3.1 + Ponytail v5
 motor vendored ref `4db20b7`): mesmo protocolo, sem dependência do runtime
 Antigravity (`agy`, `~/.gemini`, hooks proprietários).
 
-## 1. Identificação de ambiente (obrigatória antes de mutar)
+## 1. Ambiente sob demanda (sem verificação inicial)
 
-Detecte com evidência (`git branch --show-current`, `APP_ENV`/`CEH_ENV`, `.env*`):
+Não há inspeção inicial do sistema: nenhuma leitura de branch, env ou stack é
+feita na abertura da sessão. O ambiente é resolvido pelo hook `safety-gate`
+(`PreToolUse`) no momento da primeira ferramenta, e por
+`scripts/detect-project.sh` apenas quando uma decisão exige a stack.
+Declarar ambiente e Risk Dial só ao mutar ou em risco `HIGH` — nunca como
+preâmbulo. A tabela abaixo é referência consultada sob demanda, não carga inicial:
 
 | Ambiente | Sinais neste repo | Rigor |
 |---|---|---|
@@ -50,7 +55,14 @@ Gestão por exceção: só transfira ao humano (handoff) diante de (1) ambiguida
 
 Visibilidade (Heurística 12, anti-silent-loop): em cadeia com mais de 2 chamadas de ferramenta consecutivas, emita 1 frase curta com o que está inspecionando e o achado parcial antes da próxima ferramenta.
 
-## 5. Roteamento de skills
+## 5. Roteamento (infra determinística, zero prompt no loader)
+
+O loader registra zero skills/comandos — só o hook `safety-gate` (código).
+Ambiente, Risk Dial e rota são resolvidos por `scripts/ceh-dispatch.py --task
+"..."` (sinais em `routing.json`), que devolve apenas o caminho do arquivo de
+referência; este corpo só é lido se esse 1 arquivo for aberto explicitamente.
+`index.json`/`INDEX.md` (tags, `scripts/build-index.py`) localizam o arquivo.
+Resumo das rotas:
 
 | Objetivo | Skill |
 |---|---|
