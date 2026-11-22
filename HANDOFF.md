@@ -200,22 +200,26 @@ neste ciclo). Pendentes vivos: ver §12 (backlog).
   CC2 e leitura de segredos via shell como limites do gate estático, e
   troca de fonte no `install.sh` só via remove+install. Reabrir exige
   ADR nova com caso concreto reproduzido.
-- [ ] **Canário formal na sessão nova pós-restart (testes 2–3)** —
-  debug `pendencia-canario-pos-restart` (2026-11-22, P3/env): a sessão
-  reiniciada `01a201b5` só executou o teste 1 (`CEH pronto.`, seq. 57;
-  0 hook runs no log dela). Faltam, **dentro daquela sessão**: teste 2
-  (`git log --oneline` sem limite → ALLOW + `ELO3-ADVISORY` na trilha
-  CEH-SAFETY do `session.jsonl` dela) e teste 3 (`corrigir typo` →
-  `nao-verificado` sem detect). Causa raiz: prova de canário é por
-  sessão e não é herdada no restart (ADR-004). Lição persistida na KB
-  DevMemory (captura `01a201b9-7299-7043-ade3-009fdb3057bb`). Sem
-  impacto no código publicado (`207a2db`, CI verde em `dev`/`main`).
-- [ ] **`muse-ceh` no host + restart + tarefa-canário do hook
+- [x] **Canário formal na sessão nova pós-restart — FECHADO**
+  (2026-11-22): sessão `01a201c7` executou os 3 testes com veredito
+  OBSERVED PASS 3/3, corroborado no `session.jsonl` dela: teste 1
+  `CEH pronto.` isolado; teste 2 seq. 100
+  `plugin:clearer-muse:safety-gate:2` com
+  `[ELO3-ADVISORY: git log sem limite` na trilha; teste 3 via
+  `ceh-dispatch.py` → LOW, `nao-verificado`, sem detect (ressalva
+  registrada naquela sessão: pergunta de clarificação e `git status`
+  antes do dispatch, sem violar o critério). Debug de origem:
+  `pendencia-canario-pos-restart`; lição na KB DevMemory
+  (`01a201b9-7299-7043-ade3-009fdb3057bb`).
+- [x] **`muse-ceh` no host + restart + tarefa-canário do hook
   único** — pendência herdada do §9. **Parte executada em 2026-11-22:**
   `test_manifest.sh` PASS (v0.2.1, sem hook) e `muse plugins install
   profiles/muse-ceh` (não estava instalado; `update` não se aplicava)
   → `muse-ceh 0.2.1 enabled/active, hooks=0` (sem duplicar o hook do
-  `clearer-muse`). Restam restart + tarefa-canário na sessão nova.
+  `clearer-muse`). **Fechado em 2026-11-22:** restart executado e
+  canário na sessão `01a201c7` — todos os hook runs do log são
+  `plugin:clearer-muse:safety-gate` (0 de `muse-ceh`), provando o
+  hook único sem duplicação.
 
 ## 13. Revisão externa Codex — correções v0.12.1
 
