@@ -198,6 +198,20 @@ neste ciclo). Pendentes vivos: ver §12 (backlog).
   compensatórios CC2 e leitura de segredos via shell permanecem limites
   do gate estático, e `install.sh` em update usa fonte/escopo já
   registrados (mensagem corrigida; troca de fonte exige remove+install).
+- [ ] **Canário formal na sessão nova pós-restart (testes 2–3)** —
+  debug `pendencia-canario-pos-restart` (2026-11-22, P3/env): a sessão
+  reiniciada `01a201b5` só executou o teste 1 (`CEH pronto.`, seq. 57;
+  0 hook runs no log dela). Faltam, **dentro daquela sessão**: teste 2
+  (`git log --oneline` sem limite → ALLOW + `ELO3-ADVISORY` na trilha
+  CEH-SAFETY do `session.jsonl` dela) e teste 3 (`corrigir typo` →
+  `nao-verificado` sem detect). Causa raiz: prova de canário é por
+  sessão e não é herdada no restart (ADR-004). Lição persistida na KB
+  DevMemory (captura `01a201b9-7299-7043-ade3-009fdb3057bb`). Sem
+  impacto no código publicado (`207a2db`, CI verde em `dev`/`main`).
+- [ ] **`muse plugins update muse-ceh` + restart + tarefa-canário do
+  hook único** — pendência herdada do §9 sem evidência OBSERVED de
+  fechamento: atualizar o profile `muse-ceh` (v0.2.1) no host,
+  reiniciar e rodar a tarefa-canário; registrar o resultado aqui.
 
 ## 13. Revisão externa Codex — correções v0.12.1
 
