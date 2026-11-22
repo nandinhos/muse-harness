@@ -18,11 +18,11 @@ topologia clássica), com tudo publicado.
 
 | Item | Estado |
 |---|---|
-| `profiles/clearer-muse/` | canônico v0.12.1 (Etapa 4 + correções da revisão Codex): 16 skills, 2 commands, hook `safety-gate` (adapter sobre o motor CEH v2.3.1 vendorizado em `hooks/vendor/ceh/`, ref `4db20b7`), 22 scripts, suíte `tests/` 9/9 + E2E `evals/orchestration/` 6/6 |
+| `profiles/clearer-muse/` | canônico v0.13.0 (Etapa 4 + correções Codex + guarda de contexto/Elo3/dispatch sob demanda, `47c0821`): 16 skills, 2 commands, hook `safety-gate` (adapter sobre o motor CEH v2.3.1 vendorizado em `hooks/vendor/ceh/`, ref `4db20b7`), 27 scripts, suíte `tests/` 9/9 + E2E `evals/orchestration/` 6/6 |
 | `profiles/muse-ceh/` | dispatcher pessoal v0.2.1 (skill + comando + teste, `hooks=0`; ver `HANDOFF-muse-ceh.md`) |
 | `docs/CREATE-PROFILE.md` | guia de criação de profile (anatomia, 7 passos, segredos, checklist, riscos) |
 | `templates/mcp.json` | base MCP só com `context7` + `${CONTEXT7_API_KEY}` (sem segredo) |
-| `adr/001…007` | Context7, lições, minimalismo (ponytail), hook órfão no update, governança CEH, isenção declaration-only, orquestração/telemetria shadow |
+| `adr/001…009` | Context7, lições, minimalismo (ponytail), hook órfão no update, governança CEH, isenção declaration-only, orquestração/telemetria shadow, guarda de contexto (008), orçamento de input/Elo3 (009) |
 | `LICENSE` / CI | MIT; GitHub Actions em `dev`+`main` (sintaxe + evals 16/16 + suíte 9/9) |
 | Segredos | varredura limpa em todo o repo; chave real só em `~/.bashrc` do host (600) |
 | `events` | sem `plugins/clearer-muse/`; `installed.json` reapontado para cá (ver §5) |
@@ -228,8 +228,41 @@ passos, BLOCK ≥300k/200 — exit 1/2; BLOCK na sessão do incidente), teto
 duro de 16k chars no `compress-output.sh`, regras anti-duplicação de
 subagentes (`clearer-orchestration`) e seção “Guarda de contexto” no
 `token-economy` + `/token-report`. Decisão e limites: ADR-008.
-Pendente (orientação do mantenedor, 2026-11-19): ativar no host
-(`muse plugins update clearer-muse` + restart) e recalibrar os
-limiares (150k/300k, 80/200 passos) com testes reais — **quando voltar
-nosso limite** (sessão nova, contexto zerado), não nesta sessão; até lá
-os limiares valem como heurística do incidente, sem endurecer.
+Pendente original (orientação do mantenedor, 2026-11-19): ativar no host
+e recalibrar os limiares com testes reais em sessão nova. **Fechada em
+2026-11-22 (ver §15):** ativação no host e recalibração N=10 executadas;
+os limiares (150k/300k, 80/200 passos) seguem como heurística do
+incidente, sem endurecer — o teto operacional é o `last_input_step`.
+
+## 15. Encerramento v0.13.0 — ativação e recalibração (2026-11-22)
+
+Evolução entregue em `47c0821` (`feat (harness): dispatch sob demanda,
+teto de input e Elo3 advisory`, v0.13.0): alias `muse-ceh-yolo` enxuto
+nos dois rc (causa do dreno era o prompt imperativo que forçava
+detect/preflight na abertura), plugin `clearer-muse` atualizado via
+`muse plugins update` com hook `safety-gate` aprovado (hash
+`aed1af53`), suíte 9/9 PASS (SCRIPTS-SMOKE 50/50).
+
+Recalibração N=10 (ADR-009 §3): comandos delimitados = 0 advisories;
+mediana real/step 27.624 em sessões curtas; teto operacional segue
+sendo o `last_input_step` do `context-guard.py` (WARN 150k / BLOCK
+300k), não uma média real/step única.
+
+Testes OBSERVED nesta sessão (sessão `01a201a5`, 2026-11-22):
+
+1. Abertura: resposta isolada `CEH pronto.`, sem ferramentas — PASS.
+2. `git log --oneline` sem limite: ALLOW sem deny (`exit 0`, 65 linhas,
+   `47c0821`…`4de6f7b`); trilha CEH-SAFETY no `session.jsonl` seq. 122
+   (`plugin:clearer-muse:safety-gate:2`, `stderr`): `CEH-SAFETY ALLOW
+   development :: … [ELO3-ADVISORY: git log sem limite — prefira
+   git_inspect.py --limit ou compress-output.sh]` — PASS. Lição: o
+   advisory vive no `stderr` do hook gravado no log da sessão, não no
+   output da ferramenta devolvido ao modelo.
+3. Dispatch LOW `corrigir typo`: nenhum detect executado, ambiente
+   `nao-verificado` (via `ceh-dispatch.py`) — PASS.
+
+Veredito dos testes: 3 PASS / 0 FALHA. Nenhuma pendência de
+implementação de código permanece nesta evolução; o backlog do §12
+(fail-open externo do enhancements, A/B vivo do roteador shadow e
+resíduos da revisão Codex) segue aberto como item conhecido e
+não-bloqueante. Adiados `ponytail:` do §9 permanecem com gatilho.
