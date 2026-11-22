@@ -22,7 +22,7 @@ topologia clássica), com tudo publicado.
 | `profiles/muse-ceh/` | dispatcher pessoal v0.2.1 (skill + comando + teste, `hooks=0`; ver `HANDOFF-muse-ceh.md`) |
 | `docs/CREATE-PROFILE.md` | guia de criação de profile (anatomia, 7 passos, segredos, checklist, riscos) |
 | `templates/mcp.json` | base MCP só com `context7` + `${CONTEXT7_API_KEY}` (sem segredo) |
-| `adr/001…009` | Context7, lições, minimalismo (ponytail), hook órfão no update, governança CEH, isenção declaration-only, orquestração/telemetria shadow, guarda de contexto (008), orçamento de input/Elo3 (009) |
+| `adr/001…010` | Context7, lições, minimalismo (ponytail), hook órfão no update, governança CEH, isenção declaration-only, orquestração/telemetria shadow, guarda de contexto (008), orçamento de input/Elo3 (009), aceitação dos resíduos Codex (010) |
 | `LICENSE` / CI | MIT; GitHub Actions em `dev`+`main` (sintaxe + evals 16/16 + suíte 9/9) |
 | Segredos | varredura limpa em todo o repo; chave real só em `~/.bashrc` do host (600) |
 | `events` | sem `plugins/clearer-muse/`; `installed.json` reapontado para cá (ver §5) |
@@ -187,17 +187,19 @@ neste ciclo). Pendentes vivos: ver §12 (backlog).
   aqui; refutado → registrar a evidência que refuta e fechar o item.
   Impacto neste porte: nenhum (fail-closed provado); a reavaliação do
   `overwrite` mecânico fica travada até este item fechar.
+  **Preparado em 2026-11-22:** texto de issue/reprodução regenerado em
+  `docs/ISSUE-FAILOPEN-ENHANCEMENTS.md`; aguarda reprodução do
+  mantenedor — este item não fecha neste host.
 - [ ] **A/B com modelos vivos do roteador shadow** — critério
   pré-registrado em `evals/orchestration/CRITERIA.md` (N≥10/célula,
   0 BLOCKER perdido). Sem esse número, `clearer-orchestration` continua
   só classificando/registrando; nenhuma economia pode ser afirmada.
-- [ ] **Resíduos da revisão externa Codex (2026-11-19)** — itens fora da
-  correção local desta rodada: certificado local segue sem assinatura
-  (modelo de confiança local; G9 protege escrita via ferramentas, mas
-  não é proveniência criptográfica), execução dinâmica além dos padrões
-  compensatórios CC2 e leitura de segredos via shell permanecem limites
-  do gate estático, e `install.sh` em update usa fonte/escopo já
-  registrados (mensagem corrigida; troca de fonte exige remove+install).
+- [x] **Resíduos da revisão externa Codex (2026-11-19) — ACEITOS**
+  por `adr/010-aceitacao-residuos-codex.md` (2026-11-22): certificado
+  sem assinatura (confiança local), execução dinâmica além dos padrões
+  CC2 e leitura de segredos via shell como limites do gate estático, e
+  troca de fonte no `install.sh` só via remove+install. Reabrir exige
+  ADR nova com caso concreto reproduzido.
 - [ ] **Canário formal na sessão nova pós-restart (testes 2–3)** —
   debug `pendencia-canario-pos-restart` (2026-11-22, P3/env): a sessão
   reiniciada `01a201b5` só executou o teste 1 (`CEH pronto.`, seq. 57;
@@ -208,10 +210,12 @@ neste ciclo). Pendentes vivos: ver §12 (backlog).
   sessão e não é herdada no restart (ADR-004). Lição persistida na KB
   DevMemory (captura `01a201b9-7299-7043-ade3-009fdb3057bb`). Sem
   impacto no código publicado (`207a2db`, CI verde em `dev`/`main`).
-- [ ] **`muse plugins update muse-ceh` + restart + tarefa-canário do
-  hook único** — pendência herdada do §9 sem evidência OBSERVED de
-  fechamento: atualizar o profile `muse-ceh` (v0.2.1) no host,
-  reiniciar e rodar a tarefa-canário; registrar o resultado aqui.
+- [ ] **`muse-ceh` no host + restart + tarefa-canário do hook
+  único** — pendência herdada do §9. **Parte executada em 2026-11-22:**
+  `test_manifest.sh` PASS (v0.2.1, sem hook) e `muse plugins install
+  profiles/muse-ceh` (não estava instalado; `update` não se aplicava)
+  → `muse-ceh 0.2.1 enabled/active, hooks=0` (sem duplicar o hook do
+  `clearer-muse`). Restam restart + tarefa-canário na sessão nova.
 
 ## 13. Revisão externa Codex — correções v0.12.1
 
