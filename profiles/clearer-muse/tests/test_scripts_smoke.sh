@@ -452,9 +452,12 @@ rm -rf "$FAKEBIN"
 if [[ "$RCPF" -eq 0 && "$OUTPF" == *"PRESENT BUT NOT RESPONDING"* ]]; then ok "smoke-preflight-broken-bin";
 else bad "smoke-preflight-broken-bin" "rc=$RCPF"; fi
 
-# --- input-budget: teto RULE-OPT-01 ---
-python3 "$SCR/input-budget.py" --files "$HOME/.claude/CLAUDE.md" --json >/dev/null 2>&1; RCBUD0=$?
-python3 "$SCR/input-budget.py" --files "$HOME/.claude/CLAUDE.md" --ceiling-total 100 --json >/dev/null 2>&1; RCBUD1=$?
+# --- input-budget: teto RULE-OPT-01 (fixture hermetico, sem depender de $HOME) ---
+BUDFIX="$(mktemp)"
+head -c 200 /dev/zero | tr '\0' 'x' > "$BUDFIX"
+python3 "$SCR/input-budget.py" --files "$BUDFIX" --json >/dev/null 2>&1; RCBUD0=$?
+python3 "$SCR/input-budget.py" --files "$BUDFIX" --ceiling-total 100 --json >/dev/null 2>&1; RCBUD1=$?
+rm -f "$BUDFIX"
 if [[ "$RCBUD0" -eq 0 && "$RCBUD1" -eq 1 ]]; then ok "smoke-input-budget";
 else bad "smoke-input-budget" "rc ok/over=$RCBUD0/$RCBUD1 (esperado 0/1)"; fi
 
